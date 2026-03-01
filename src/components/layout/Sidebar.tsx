@@ -5,9 +5,9 @@ export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
         { name: "Panel Principal", href: "/dashboard", icon: Home },
         { name: "Control de Accesos", href: "/dashboard/access", icon: Shield },
-        { name: "Socios", href: "/dashboard/members", icon: Users },
+        { name: "Socios", href: "/dashboard/socios", icon: Users },
         { name: "Membresías y Pagos", href: "/dashboard/payments", icon: CreditCard },
-        { name: "Configuración", href: "/dashboard/settings", icon: Settings },
+        { name: "Configuración", href: "/dashboard/configuracion", icon: Settings },
     ];
 
     if (isSuperAdmin) {

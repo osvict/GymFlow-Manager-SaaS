@@ -1,3 +1,5 @@
+"use client";
+
 import { Bell, Search, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,19 +16,29 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { Sidebar } from "./Sidebar";
 import Link from "next/link";
 import { Dumbbell, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
+    const router = useRouter();
     const navItems = [
         { name: "Panel Principal", href: "/dashboard", icon: Home },
         { name: "Control de Accesos", href: "/dashboard/access", icon: Shield },
-        { name: "Socios", href: "/dashboard/members", icon: Users },
+        { name: "Socios", href: "/dashboard/socios", icon: Users },
         { name: "Membresías y Pagos", href: "/dashboard/payments", icon: CreditCard },
-        { name: "Configuración", href: "/dashboard/settings", icon: Settings },
+        { name: "Configuración", href: "/dashboard/configuracion", icon: Settings },
     ];
 
     if (isSuperAdmin) {
         navItems.push({ name: "Gestión de Gimnasios", href: "/admin/gimnasios", icon: Dumbbell });
     }
+
+    const handleSignOut = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push("/login");
+        router.refresh();
+    };
 
     return (
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6 shadow-sm">
@@ -93,7 +105,9 @@ export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
                         <DropdownMenuItem>Mi Perfil</DropdownMenuItem>
                         <DropdownMenuItem>Soporte Técnico</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10">Cerrar Sesión</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={handleSignOut}>
+                            Cerrar Sesión
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
