@@ -9,9 +9,9 @@ export default async function AdminLayout({
     children: React.ReactNode;
 }) {
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
         redirect("/login");
     }
 
@@ -19,7 +19,7 @@ export default async function AdminLayout({
     const { data: profile } = await supabase
         .from("perfiles")
         .select("rol")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
 
     const isSuperAdmin = profile?.rol === "super_admin";
