@@ -1,6 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { ROLE_PERMISSIONS, Role } from "@/lib/utils/rbac";
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -49,17 +48,6 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = "/login";
         return NextResponse.redirect(url);
-    }
-
-    // Basic RBAC Validation for Edge Middleware
-    if (user && isAdminRoute) {
-        const role: Role = user.app_metadata?.role || "MEMBER";
-
-        if (role !== "SUPER_ADMIN" && role !== "TENANT_ADMIN") {
-            const url = request.nextUrl.clone();
-            url.pathname = "/dashboard"; // Redirect non-admins to their dashboard
-            return NextResponse.redirect(url);
-        }
     }
 
     return supabaseResponse;
