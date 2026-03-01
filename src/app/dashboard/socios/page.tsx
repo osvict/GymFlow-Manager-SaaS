@@ -1,147 +1,206 @@
+"use client";
+
+import { useState, useEffect, useTransition } from "react";
+import { Plus, Edit, User, Mail, Phone, Calendar } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { crearSocio } from "@/app/actions/socio-actions";
 
-export default function SociosPage() {
-    // Datos de prueba (Mock Data) para visualización UI
-    const mockSocios = [
-        {
-            id: "1",
-            nombre: "Juan",
-            apellidos: "Pérez García",
-            correo: "juan.perez@email.com",
-            telefono: "+525512345678",
-            estado: "activo",
-            fechaAlta: "12 Oct 2023",
-        },
-        {
-            id: "2",
-            nombre: "María Fernanda",
-            apellidos: "Gómez López",
-            correo: "mfgomez@email.com",
-            telefono: "+528198765432",
-            estado: "con_adeudo",
-            fechaAlta: "05 Nov 2023",
-        },
-        {
-            id: "3",
-            nombre: "Carlos",
-            apellidos: "Ramírez Silva",
-            correo: "carlos.rs@email.com",
-            telefono: "+523311223344",
-            estado: "inactivo",
-            fechaAlta: "20 Ago 2022",
-        },
-        {
-            id: "4",
-            nombre: "Ana",
-            apellidos: "Martínez",
-            correo: "ana.martinez@email.com",
-            telefono: "+525544332211",
-            estado: "activo",
-            fechaAlta: "01 Ene 2024",
-        }
-    ];
+export default function GestorSocios() {
+    const [socios, setSocios] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isPending, startTransition] = useTransition();
+    const [open, setOpen] = useState(false);
 
-    // Helper para renderizar el badge correcto según el estado
-    const renderEstadoBadge = (estado: string) => {
-        switch (estado) {
-            case "activo":
-                return <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20">Activo</Badge>;
-            case "con_adeudo":
-                return <Badge variant="destructive" className="bg-rose-500/15 text-rose-600 hover:bg-rose-500/25 border-rose-500/20">Con Adeudo</Badge>;
-            case "inactivo":
-                return <Badge variant="secondary" className="bg-slate-500/15 text-slate-500 hover:bg-slate-500/25 border-slate-500/20">Inactivo</Badge>;
-            default:
-                return <Badge variant="outline">{estado}</Badge>;
+    const supabase = createClient();
+
+    const fetchSocios = async () => {
+        setIsLoading(true);
+        // Supabase RLS will automatically filter these for the user's tenant_id!
+        const { data, error } = await supabase
+            .from("socios")
+            .select("*")
+            .order("fecha_registro", { ascending: false });
+
+        if (error) {
+            console.error(error);
+            toast.error("No se pudieron cargar los socios.");
+        } else {
+            setSocios(data || []);
         }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        fetchSocios();
+    }, []);
+
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        startTransition(async () => {
+            const result = await crearSocio(null, formData);
+            if (result?.error) {
+                toast.error(result.error);
+            } else if (result?.success) {
+                toast.success(result.message);
+                setOpen(false);
+                fetchSocios();
+            }
+        });
     };
 
     return (
         <div className="space-y-6">
-            {/* Cabecera Principal */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Gestión de Socios</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Administra las membresías, contactos y el estado de pagos de todos tus clientes.
-                    </p>
+                    <h1 className="text-3xl font-bold tracking-tight">Directorio de Socios</h1>
+                    <p className="text-muted-foreground mt-1">Administra los miembros de tu gimnasio aquí.</p>
                 </div>
-                <Button className="shrink-0">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nuevo Socio
-                </Button>
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                        <Button>
+                            <Plus className="mr-2 h-4 w-4" />
+                            + Registrar Socio
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Registrar Nuevo Socio</DialogTitle>
+                            <DialogDescription>
+                                Agrega un integrante a la familia de tu gimnasio.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={onSubmit}>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="nombre" className="text-right">
+                                        Nombre(s)
+                                    </Label>
+                                    <Input id="nombre" name="nombre" placeholder="Juan" className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="apellidos" className="text-right">
+                                        Apellidos
+                                    </Label>
+                                    <Input id="apellidos" name="apellidos" placeholder="Pérez" className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="correo" className="text-right">
+                                        Email
+                                    </Label>
+                                    <Input id="correo" name="correo" type="email" placeholder="Opcional" className="col-span-3" disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="telefono" className="text-right">
+                                        Teléfono
+                                    </Label>
+                                    <Input id="telefono" name="telefono" type="tel" placeholder="+52..." className="col-span-3" disabled={isPending} />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isPending}>
+                                    {isPending ? "Registrando..." : "Guardar Socio"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
 
-            {/* Tabla de Socios */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Directorio de Socios</CardTitle>
-                    <CardDescription>
-                        Lista de todos los usuarios registrados en tu gimnasio.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border border-border">
-                        <Table>
-                            <TableHeader className="bg-muted/50">
-                                <TableRow>
-                                    <TableHead className="w-[300px]">Socio</TableHead>
-                                    <TableHead>Contacto</TableHead>
-                                    <TableHead>Fecha de Alta</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead className="text-right">Acciones</TableHead>
+            <div className="rounded-md border bg-card">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nombre Completo</TableHead>
+                            <TableHead>Contacto</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Fecha Ingreso</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                    Cargando socios...
+                                </TableCell>
+                            </TableRow>
+                        ) : socios.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground flex-col items-center">
+                                    <User className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                                    No hay socios registrados aún.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            socios.map((socio) => (
+                                <TableRow key={socio.id}>
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                                                {socio.nombre.charAt(0)}{socio.apellidos.charAt(0)}
+                                            </div>
+                                            {socio.nombre} {socio.apellidos}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                                            {socio.correo && (
+                                                <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {socio.correo}</span>
+                                            )}
+                                            {socio.telefono && (
+                                                <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {socio.telefono}</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={socio.estado === "activo" ? "default" : (socio.estado === "inactivo" ? "secondary" : "destructive")}
+                                            className={socio.estado === "activo" ? "bg-green-600 hover:bg-green-700 text-white" : ""}>
+                                            {socio.estado.toUpperCase().replace("_", " ")}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="flex items-center gap-1 text-muted-foreground">
+                                            <Calendar className="h-3 w-3" />
+                                            {new Date(socio.fecha_registro).toLocaleDateString()}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon">
+                                            <Edit className="h-4 w-4 text-muted-foreground" />
+                                            <span className="sr-only">Editar Socio</span>
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {mockSocios.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                                            No hay socios registrados
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    mockSocios.map((socio) => (
-                                        <TableRow key={socio.id} className="hover:bg-muted/50 transition-colors">
-                                            <TableCell className="font-medium">
-                                                <div className="flex flex-col">
-                                                    <span>{socio.nombre} {socio.apellidos}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col space-y-1">
-                                                    <span className="text-sm text-muted-foreground">{socio.correo}</span>
-                                                    <span className="text-xs text-muted-foreground/80 font-mono">{socio.telefono}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                {socio.fechaAlta}
-                                            </TableCell>
-                                            <TableCell>
-                                                {renderEstadoBadge(socio.estado)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                                                        <Pencil className="h-4 w-4" />
-                                                        <span className="sr-only">Editar</span>
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                                        <Trash2 className="h-4 w-4" />
-                                                        <span className="sr-only">Eliminar</span>
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     );
 }
