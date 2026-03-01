@@ -27,13 +27,15 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { crearGimnasio } from "@/app/actions/tenant-actions";
+import { crearGimnasio, editarGimnasio, toggleEstadoGimnasio } from "@/app/actions/tenant-actions";
 
 export default function GestorGimnasios() {
     const [tenants, setTenants] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editingGym, setEditingGym] = useState<any>(null);
 
     const supabase = createClient();
 
@@ -69,16 +71,13 @@ export default function GestorGimnasios() {
             )
         );
 
-        const { error } = await supabase
-            .from("tenants")
-            .update({ estado: newStatus })
-            .eq("id", id);
+        const result = await toggleEstadoGimnasio(id, currentStatus);
 
-        if (error) {
-            toast.error("Error al actualizar estado.");
+        if (result?.error) {
+            toast.error(result.error);
             fetchTenants(); // revert
-        } else {
-            toast.success("Estado actualizado.");
+        } else if (result?.success) {
+            toast.success(result.message);
         }
     };
 
@@ -93,6 +92,23 @@ export default function GestorGimnasios() {
             } else if (result?.success) {
                 toast.success(result.message);
                 setOpen(false);
+                fetchTenants();
+            }
+        });
+    };
+
+    const onEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        startTransition(async () => {
+            const result = await editarGimnasio(editingGym.id, formData);
+            if (result?.error) {
+                toast.error(result.error);
+            } else if (result?.success) {
+                toast.success(result.message);
+                setEditOpen(false);
+                setEditingGym(null);
                 fetchTenants();
             }
         });
@@ -154,6 +170,55 @@ export default function GestorGimnasios() {
                         </form>
                     </DialogContent>
                 </Dialog>
+
+                <Dialog open={editOpen} onOpenChange={(val) => {
+                    setEditOpen(val);
+                    if (!val) setEditingGym(null);
+                }}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Editar Gimnasio</DialogTitle>
+                            <DialogDescription>
+                                Modifica los datos del gimnasio seleccionado.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {editingGym && (
+                            <form onSubmit={onEditSubmit}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-nombre" className="text-right">
+                                            Nombre
+                                        </Label>
+                                        <Input id="edit-nombre" name="nombre" defaultValue={editingGym.nombre} className="col-span-3" required disabled={isPending} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-slug" className="text-right">
+                                            Slug
+                                        </Label>
+                                        <Input id="edit-slug" name="slug" defaultValue={editingGym.slug} className="col-span-3" required disabled={isPending} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-correo" className="text-right">
+                                            Email
+                                        </Label>
+                                        <Input id="edit-correo" name="correo" type="email" defaultValue={editingGym.correo_contacto} className="col-span-3" disabled={isPending} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="edit-telefono" className="text-right">
+                                            Teléfono
+                                        </Label>
+                                        <Input id="edit-telefono" name="telefono" type="tel" defaultValue={editingGym.telefono} className="col-span-3" disabled={isPending} />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit" disabled={isPending}>
+                                        {isPending ? "Guardando..." : "Actualizar"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </div>
 
             <div className="rounded-md border">
@@ -195,7 +260,10 @@ export default function GestorGimnasios() {
                                     <TableCell>{new Date(gym.fecha_creacion).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end items-center gap-2">
-                                            <Button variant="outline" size="icon">
+                                            <Button variant="outline" size="icon" onClick={() => {
+                                                setEditingGym(gym);
+                                                setEditOpen(true);
+                                            }}>
                                                 <Edit className="h-4 w-4" />
                                                 <span className="sr-only">Editar</span>
                                             </Button>
