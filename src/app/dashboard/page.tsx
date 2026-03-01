@@ -8,13 +8,13 @@ export default function DashboardPage() {
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
-                <p className="text-muted-foreground mt-2">Visión general del estado de tu autolavado.</p>
+                <p className="text-muted-foreground mt-2">Visión general del estado de tu centro deportivo.</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="bg-card">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Servicios Activos</CardTitle>
+                        <CardTitle className="text-sm font-medium">Socios Activos</CardTitle>
                         <Users className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
@@ -71,10 +71,10 @@ export default function DashboardPage() {
                             </TableHeader>
                             <TableBody>
                                 {[
-                                    { name: "Ford Mustang (Juan P.)", time: "Hace 2 min", status: "Completado", statusColor: "text-green-500" },
-                                    { name: "Honda CR-V (María G.)", time: "Hace 5 min", status: "Completado", statusColor: "text-green-500" },
-                                    { name: "Nissan Versa (Carlos L.)", time: "Hace 12 min", status: "Cancelado", statusColor: "text-red-500" },
-                                    { name: "Toyota RAV4 (Ana T.)", time: "Hace 15 min", status: "Completado", statusColor: "text-green-500" },
+                                    { name: "Juan Pérez", time: "Hace 2 min", status: "Permitido", statusColor: "text-green-500" },
+                                    { name: "María Gómez", time: "Hace 5 min", status: "Permitido", statusColor: "text-green-500" },
+                                    { name: "Carlos López", time: "Hace 12 min", status: "Denegado", statusColor: "text-red-500" },
+                                    { name: "Ana Torres", time: "Hace 15 min", status: "Permitido", statusColor: "text-green-500" },
                                 ].map((row, i) => (
                                     <TableRow key={i}>
                                         <TableCell className="font-medium">{row.name}</TableCell>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
                     <CardContent className="space-y-4">
                         <Button className="w-full justify-start" size="lg">
                             <UserPlus className="mr-2 h-4 w-4" />
-                            + Nuevo Servicio
+                            + Nuevo Socio
                         </Button>
                         <Button className="w-full justify-start" variant="secondary" size="lg">
                             <DollarSign className="mr-2 h-4 w-4" />

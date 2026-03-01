@@ -13,7 +13,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
 import Link from "next/link";
-import { Car, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
+import { Dumbbell, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
 
 export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
@@ -25,7 +25,7 @@ export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     ];
 
     if (isSuperAdmin) {
-        navItems.push({ name: "Autolavados", href: "/admin/autolavados", icon: Car });
+        navItems.push({ name: "Gestión de Gimnasios", href: "/admin/gimnasios", icon: Dumbbell });
     }
 
     return (
@@ -40,8 +40,8 @@ export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
                 <SheetContent side="left" className="w-72 p-0 bg-sidebar border-r-0">
                     <SheetTitle className="sr-only">Menú de Navegación</SheetTitle>
                     <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-                        <Car className="h-6 w-6 text-primary mr-3" />
-                        <span className="text-lg font-bold tracking-tight text-sidebar-foreground">LavaPro</span>
+                        <Dumbbell className="h-6 w-6 text-primary mr-3" />
+                        <span className="text-lg font-bold tracking-tight text-sidebar-foreground">GymFlow</span>
                     </div>
                     <nav className="flex-1 space-y-2 p-4 text-sidebar-foreground">
                         {navItems.map((item) => {
@@ -67,7 +67,7 @@ export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             type="search"
-                            placeholder="Buscar clientes o transacciones..."
+                            placeholder="Buscar socios o transacciones..."
                             className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted/50 border-none focus-visible:ring-1"
                         />
                     </div>

@@ -2,18 +2,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Car } from "lucide-react";
+import { Dumbbell } from "lucide-react";
 
 export default function LoginPage() {
     return (
         <div className="flex h-screen w-screen flex-col items-center justify-center bg-muted/40">
             <div className="mb-8 flex flex-col items-center text-center">
                 <div className="flex items-center justify-center h-16 w-16 bg-primary/10 rounded-full mb-4">
-                    <Car className="h-8 w-8 text-primary" />
+                    <Dumbbell className="h-8 w-8 text-primary" />
                 </div>
-                <h1 className="text-2xl font-semibold tracking-tight">LavaPro Manager</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">GymFlow Manager</h1>
                 <p className="text-sm text-muted-foreground mt-2">
-                    SaaS para centros de Autolavado
+                    Facial Recognition Edge / Cloud Management
                 </p>
             </div>
 
