@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Dumbbell, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
+import { Car, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
 
 export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
@@ -11,14 +11,14 @@ export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     ];
 
     if (isSuperAdmin) {
-        navItems.push({ name: "Gestión de Gimnasios", href: "/admin/gimnasios", icon: Dumbbell });
+        navItems.push({ name: "Autolavados", href: "/admin/autolavados", icon: Car });
     }
 
     return (
         <aside className="hidden w-64 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
             <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-                <Dumbbell className="h-6 w-6 text-primary mr-3" />
-                <span className="text-lg font-bold tracking-tight">GymFlow</span>
+                <Car className="h-6 w-6 text-primary mr-3" />
+                <span className="text-lg font-bold tracking-tight">LavaPro</span>
             </div>
             <nav className="flex-1 space-y-2 p-4">
                 {navItems.map((item) => {
@@ -36,7 +36,7 @@ export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
                 })}
             </nav>
             <div className="p-4 border-t border-sidebar-border text-xs text-muted-foreground text-center">
-                &copy; 2026 GymFlow Manager
+                &copy; 2026 LavaPro Manager
             </div>
         </aside>
     );

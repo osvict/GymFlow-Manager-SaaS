@@ -30,31 +30,31 @@ import {
 const INITIAL_TENANTS = [
     {
         id: "1",
-        nombre: "GymZona Centro",
-        slug: "gymzona-centro",
-        correoContacto: "admin@gymzona.com",
+        nombre: "CarWash Norte",
+        slug: "carwash-norte",
+        correoContacto: "admin@cwnorte.com",
         estado: "activo",
         fechaCreacion: "2026-01-15",
     },
     {
         id: "2",
-        nombre: "Fitness Sur",
-        slug: "fitness-sur",
-        correoContacto: "contacto@fitnesssur.com",
+        nombre: "AutoLimpio Sur",
+        slug: "autolimpio-sur",
+        correoContacto: "contacto@autolimpiosur.com",
         estado: "activo",
         fechaCreacion: "2026-02-10",
     },
     {
         id: "3",
-        nombre: "Iron Palace",
-        slug: "iron-palace",
-        correoContacto: "hello@ironpalace.mx",
+        nombre: "Burbuja Express",
+        slug: "burbuja-express",
+        correoContacto: "hello@burbuja.mx",
         estado: "inactivo",
         fechaCreacion: "2025-11-05",
     },
 ];
 
-export default function GestorGimnasios() {
+export default function GestorAutolavados() {
     const [tenants, setTenants] = useState(INITIAL_TENANTS);
 
     const toggleEstado = (id: string, currentStatus: string) => {
@@ -72,21 +72,21 @@ export default function GestorGimnasios() {
         <div className="space-y-6 container mx-auto py-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Gestión de Gimnasios (Super Admin)</h1>
-                    <p className="text-muted-foreground mt-1">Control maestro de tenants de GymFlow.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Gestión de Autolavados (Super Admin)</h1>
+                    <p className="text-muted-foreground mt-1">Control maestro de tenants de LavaPro Manager.</p>
                 </div>
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button>
                             <Plus className="mr-2 h-4 w-4" />
-                            + Registrar Gimnasio
+                            + Nuevo Autolavado
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Registrar Nuevo Gimnasio</DialogTitle>
+                            <DialogTitle>Registrar Nuevo Autolavado</DialogTitle>
                             <DialogDescription>
-                                Añade un nuevo tenant al sistema GymFlow.
+                                Añade un nuevo tenant al sistema LavaPro.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -94,19 +94,19 @@ export default function GestorGimnasios() {
                                 <Label htmlFor="nombre" className="text-right">
                                     Nombre
                                 </Label>
-                                <Input id="nombre" placeholder="Gym Titan" className="col-span-3" />
+                                <Input id="nombre" placeholder="CarWash Express" className="col-span-3" />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="slug" className="text-right">
                                     Slug
                                 </Label>
-                                <Input id="slug" placeholder="gym-titan" className="col-span-3" />
+                                <Input id="slug" placeholder="carwash-express" className="col-span-3" />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="correo" className="text-right">
                                     Email
                                 </Label>
-                                <Input id="correo" type="email" placeholder="contacto@titan.com" className="col-span-3" />
+                                <Input id="correo" type="email" placeholder="contacto@carwash.com" className="col-span-3" />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="telefono" className="text-right">
