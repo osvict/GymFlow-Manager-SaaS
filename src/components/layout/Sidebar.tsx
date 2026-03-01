@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Dumbbell, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
 
-export function Sidebar() {
+export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
         { name: "Panel Principal", href: "/dashboard", icon: Home },
         { name: "Control de Accesos", href: "/dashboard/access", icon: Shield },
@@ -9,6 +9,10 @@ export function Sidebar() {
         { name: "Membresías y Pagos", href: "/dashboard/payments", icon: CreditCard },
         { name: "Configuración", href: "/dashboard/settings", icon: Settings },
     ];
+
+    if (isSuperAdmin) {
+        navItems.push({ name: "Gestión de Gimnasios", href: "/admin/gimnasios", icon: Dumbbell });
+    }
 
     return (
         <aside className="hidden w-64 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">

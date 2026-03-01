@@ -15,7 +15,7 @@ import { Sidebar } from "./Sidebar";
 import Link from "next/link";
 import { Dumbbell, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
 
-export function Header() {
+export function Header({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
         { name: "Panel Principal", href: "/dashboard", icon: Home },
         { name: "Control de Accesos", href: "/dashboard/access", icon: Shield },
@@ -23,6 +23,10 @@ export function Header() {
         { name: "Membresías y Pagos", href: "/dashboard/payments", icon: CreditCard },
         { name: "Configuración", href: "/dashboard/settings", icon: Settings },
     ];
+
+    if (isSuperAdmin) {
+        navItems.push({ name: "Gestión de Gimnasios", href: "/admin/gimnasios", icon: Dumbbell });
+    }
 
     return (
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6 shadow-sm">
