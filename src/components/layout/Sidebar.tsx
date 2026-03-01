@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Dumbbell, Home, Shield, Users, CreditCard, Settings } from "lucide-react";
+import { Dumbbell, Home, Shield, Users, CreditCard, Settings, Tag } from "lucide-react";
 
 export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
         { name: "Panel Principal", href: "/dashboard", icon: Home },
         { name: "Control de Accesos", href: "/dashboard/access", icon: Shield },
         { name: "Socios", href: "/dashboard/socios", icon: Users },
+        { name: "Planes de Suscripción", href: "/dashboard/planes", icon: Tag },
         { name: "Membresías y Pagos", href: "/dashboard/payments", icon: CreditCard },
         { name: "Configuración", href: "/dashboard/configuracion", icon: Settings },
     ];

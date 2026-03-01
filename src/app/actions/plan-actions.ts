@@ -1,0 +1,114 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+export async function crearPlan(prevState: any, formData: FormData) {
+    try {
+        const supabase = await createClient();
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { error: "No estás autenticado." };
+        }
+
+        const { data: profile } = await supabase
+            .from("perfiles")
+            .select("tenant_id, rol")
+            .eq("id", user.id)
+            .single();
+
+        if (!profile || !profile.tenant_id) {
+            return { error: "Acceso denegado. No tienes un tenant asignado." };
+        }
+
+        if (profile.rol !== "admin_gym") {
+            return { error: "Acceso denegado. Se requiere ser Administrador del Gimnasio para crear planes." };
+        }
+
+        const nombre = formData.get("nombre") as string;
+        const descripcion = formData.get("descripcion") as string;
+        const precioStr = formData.get("precio") as string;
+        const duracionDiasStr = formData.get("duracion_dias") as string;
+
+        if (!nombre || !precioStr || !duracionDiasStr) {
+            return { error: "Nombre, Precio y Duración son obligatorios." };
+        }
+
+        const precio = parseFloat(precioStr);
+        const duracion_dias = parseInt(duracionDiasStr, 10);
+
+        if (isNaN(precio) || precio < 0) {
+            return { error: "El precio debe ser un número válido mayor o igual a 0." };
+        }
+
+        if (isNaN(duracion_dias) || duracion_dias <= 0) {
+            return { error: "La duración debe ser al menos de 1 día." };
+        }
+
+        const payload: any = {
+            tenant_id: profile.tenant_id,
+            nombre,
+            precio,
+            duracion_dias,
+            estado: "activo"
+        };
+
+        if (descripcion) payload.descripcion = descripcion;
+
+        const { error } = await supabase
+            .from("planes_suscripcion")
+            .insert(payload);
+
+        if (error) {
+            console.error("Error creating plan:", error);
+            return { error: "Hubo un error al registrar el plan." };
+        }
+
+        revalidatePath("/dashboard/planes");
+        return { success: true, message: "Plan registrado exitosamente." };
+    } catch (e: any) {
+        return { error: "Error de servidor al crear plan." };
+    }
+}
+
+export async function toggleEstadoPlan(id: string, estadoActual: string) {
+    try {
+        const supabase = await createClient();
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { error: "No estás autenticado." };
+        }
+
+        const { data: profile } = await supabase
+            .from("perfiles")
+            .select("tenant_id, rol")
+            .eq("id", user.id)
+            .single();
+
+        if (profile?.rol !== "admin_gym") {
+            return { error: "Acceso denegado. Solo administradores pueden modificar planes." };
+        }
+
+        // Technically RLS protects us, but passing the id is safe because the db won't let us update a row that doesn't match our tenant_id.
+        const nuevoEstado = estadoActual === "activo" ? "inactivo" : "activo";
+
+        const { error } = await supabase
+            .from("planes_suscripcion")
+            .update({
+                estado: nuevoEstado
+            })
+            .eq("id", id);
+
+        if (error) {
+            console.error("Error toggling plan status:", error);
+            return { error: "Hubo un error al cambiar el estado del plan." };
+        }
+
+        revalidatePath("/dashboard/planes");
+        return { success: true, message: `Plan ${nuevoEstado === 'activo' ? 'activado' : 'archivado'} exitosamente.` };
+    } catch (e: any) {
+        return { error: "Error de servidor al cambiar el estado del plan." };
+    }
+}
