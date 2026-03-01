@@ -161,6 +161,21 @@ export default function GestorGimnasios() {
                                     </Label>
                                     <Input id="telefono" name="telefono" type="tel" placeholder="+52 55..." className="col-span-3" disabled={isPending} />
                                 </div>
+                                <div className="grid grid-cols-4 items-center gap-4 border-t pt-4 mt-2">
+                                    <Label htmlFor="correo_admin" className="text-right text-xs font-semibold uppercase text-muted-foreground col-span-4">
+                                        Credenciales Administrador Local
+                                    </Label>
+                                    <Label htmlFor="correo_admin" className="text-right">
+                                        Correo Admin
+                                    </Label>
+                                    <Input id="correo_admin" name="correo_admin" type="email" placeholder="admin@gym.com" className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="password_admin" className="text-right">
+                                        Contraseña
+                                    </Label>
+                                    <Input id="password_admin" name="password_admin" type="password" minLength={6} placeholder="******" className="col-span-3" required disabled={isPending} />
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button type="submit" disabled={isPending}>
