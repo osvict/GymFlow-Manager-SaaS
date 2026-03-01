@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Plus, Edit } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -25,47 +25,77 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-
-// Mock Data
-const INITIAL_TENANTS = [
-    {
-        id: "1",
-        nombre: "GymZona Centro",
-        slug: "gymzona-centro",
-        correoContacto: "admin@gymzona.com",
-        estado: "activo",
-        fechaCreacion: "2026-01-15",
-    },
-    {
-        id: "2",
-        nombre: "Fitness Sur",
-        slug: "fitness-sur",
-        correoContacto: "contacto@fitnesssur.com",
-        estado: "activo",
-        fechaCreacion: "2026-02-10",
-    },
-    {
-        id: "3",
-        nombre: "Iron Palace",
-        slug: "iron-palace",
-        correoContacto: "hello@ironpalace.mx",
-        estado: "inactivo",
-        fechaCreacion: "2025-11-05",
-    },
-];
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { crearGimnasio } from "@/app/actions/tenant-actions";
 
 export default function GestorGimnasios() {
-    const [tenants, setTenants] = useState(INITIAL_TENANTS);
+    const [tenants, setTenants] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isPending, startTransition] = useTransition();
+    const [open, setOpen] = useState(false);
 
-    const toggleEstado = (id: string, currentStatus: string) => {
+    const supabase = createClient();
+
+    const fetchTenants = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from("tenants")
+            .select("*")
+            .order("fecha_creacion", { ascending: false });
+
+        if (error) {
+            console.error(error);
+            toast.error("No se pudieron cargar los gimnasios.");
+        } else {
+            setTenants(data || []);
+        }
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        fetchTenants();
+    }, []);
+
+    const toggleEstado = async (id: string, currentStatus: string) => {
+        const newStatus = currentStatus === "activo" ? "inactivo" : "activo";
+
         // Optimistic UI Update
         setTenants(
             tenants.map((gym) =>
                 gym.id === id
-                    ? { ...gym, estado: currentStatus === "activo" ? "inactivo" : "activo" }
+                    ? { ...gym, estado: newStatus }
                     : gym
             )
         );
+
+        const { error } = await supabase
+            .from("tenants")
+            .update({ estado: newStatus })
+            .eq("id", id);
+
+        if (error) {
+            toast.error("Error al actualizar estado.");
+            fetchTenants(); // revert
+        } else {
+            toast.success("Estado actualizado.");
+        }
+    };
+
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        startTransition(async () => {
+            const result = await crearGimnasio(null, formData);
+            if (result?.error) {
+                toast.error(result.error);
+            } else if (result?.success) {
+                toast.success(result.message);
+                setOpen(false);
+                fetchTenants();
+            }
+        });
     };
 
     return (
@@ -75,7 +105,7 @@ export default function GestorGimnasios() {
                     <h1 className="text-3xl font-bold tracking-tight">Gestión de Gimnasios (Super Admin)</h1>
                     <p className="text-muted-foreground mt-1">Control maestro de tenants de GymFlow Manager.</p>
                 </div>
-                <Dialog>
+                <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button>
                             <Plus className="mr-2 h-4 w-4" />
@@ -89,35 +119,39 @@ export default function GestorGimnasios() {
                                 Añade un nuevo tenant al sistema GymFlow.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="nombre" className="text-right">
-                                    Nombre
-                                </Label>
-                                <Input id="nombre" placeholder="Gym Titan" className="col-span-3" />
+                        <form onSubmit={onSubmit}>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="nombre" className="text-right">
+                                        Nombre
+                                    </Label>
+                                    <Input id="nombre" name="nombre" placeholder="Gym Titan" className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="slug" className="text-right">
+                                        Slug
+                                    </Label>
+                                    <Input id="slug" name="slug" placeholder="gym-titan" className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="correo" className="text-right">
+                                        Email
+                                    </Label>
+                                    <Input id="correo" name="correo" type="email" placeholder="contacto@titan.com" className="col-span-3" disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="telefono" className="text-right">
+                                        Teléfono
+                                    </Label>
+                                    <Input id="telefono" name="telefono" type="tel" placeholder="+52 55..." className="col-span-3" disabled={isPending} />
+                                </div>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="slug" className="text-right">
-                                    Slug
-                                </Label>
-                                <Input id="slug" placeholder="gym-titan" className="col-span-3" />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="correo" className="text-right">
-                                    Email
-                                </Label>
-                                <Input id="correo" type="email" placeholder="contacto@titan.com" className="col-span-3" />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="telefono" className="text-right">
-                                    Teléfono
-                                </Label>
-                                <Input id="telefono" type="tel" placeholder="+52 55..." className="col-span-3" />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit">Guardar Registro</Button>
-                        </DialogFooter>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isPending}>
+                                    {isPending ? "Guardando..." : "Guardar Registro"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -135,35 +169,49 @@ export default function GestorGimnasios() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {tenants.map((gym) => (
-                            <TableRow key={gym.id}>
-                                <TableCell className="font-medium">{gym.nombre}</TableCell>
-                                <TableCell className="text-muted-foreground">{gym.slug}</TableCell>
-                                <TableCell>{gym.correoContacto}</TableCell>
-                                <TableCell>
-                                    <Badge variant={gym.estado === "activo" ? "default" : "secondary"} className={gym.estado === "activo" ? "bg-green-600 hover:bg-green-700 text-white" : ""}>
-                                        {gym.estado === "activo" ? "Activo" : "Inactivo"}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>{gym.fechaCreacion}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end items-center gap-2">
-                                        <Button variant="outline" size="icon">
-                                            <Edit className="h-4 w-4" />
-                                            <span className="sr-only">Editar</span>
-                                        </Button>
-                                        <div className="flex items-center gap-2 ml-2">
-                                            <Label htmlFor={`status-${gym.id}`} className="sr-only">Toggle Status</Label>
-                                            <Switch
-                                                id={`status-${gym.id}`}
-                                                checked={gym.estado === "activo"}
-                                                onCheckedChange={() => toggleEstado(gym.id, gym.estado)}
-                                            />
-                                        </div>
-                                    </div>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                    Cargando gimnasios...
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ) : tenants.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                    No hay gimnasios registrados.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            tenants.map((gym) => (
+                                <TableRow key={gym.id}>
+                                    <TableCell className="font-medium">{gym.nombre}</TableCell>
+                                    <TableCell className="text-muted-foreground">{gym.slug}</TableCell>
+                                    <TableCell>{gym.correo_contacto || gym.telefono || "N/A"}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={gym.estado === "activo" ? "default" : "secondary"} className={gym.estado === "activo" ? "bg-green-600 hover:bg-green-700 text-white" : ""}>
+                                            {gym.estado === "activo" ? "Activo" : "Inactivo"}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{new Date(gym.fecha_creacion).toLocaleDateString()}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end items-center gap-2">
+                                            <Button variant="outline" size="icon">
+                                                <Edit className="h-4 w-4" />
+                                                <span className="sr-only">Editar</span>
+                                            </Button>
+                                            <div className="flex items-center gap-2 ml-2">
+                                                <Label htmlFor={`status-${gym.id}`} className="sr-only">Toggle Status</Label>
+                                                <Switch
+                                                    id={`status-${gym.id}`}
+                                                    checked={gym.estado === "activo"}
+                                                    onCheckedChange={() => toggleEstado(gym.id, gym.estado)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </div>
