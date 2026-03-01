@@ -1,106 +1,113 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Users, DollarSign, Fingerprint } from "lucide-react";
+import { Users, DollarSign, Activity, UserPlus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
     return (
-        <>
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard General</h1>
+        <div className="space-y-8">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
+                <p className="text-muted-foreground mt-2">Visión general del estado de tu centro deportivo.</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Miembros Activos</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                <Card className="bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Socios Activos</CardTitle>
+                        <Users className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">+2,350</div>
-                        <p className="text-xs text-muted-foreground">+180 desde el mes pasado</p>
+                        <div className="text-2xl font-bold">1,248</div>
+                        <p className="text-xs text-muted-foreground">+12% respecto al mes anterior</p>
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Ingresos Mensuales</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <Card className="bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Ingresos del Mes</CardTitle>
+                        <DollarSign className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">$45,231.89</div>
-                        <p className="text-xs text-muted-foreground">+20.1% desde el mes pasado</p>
+                        <p className="text-xs text-muted-foreground">+8.1% respecto al mes anterior</p>
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Accesos Hoy (Edge)</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
+                <Card className="bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Accesos Hoy</CardTitle>
+                        <Activity className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">+573</div>
-                        <p className="text-xs text-muted-foreground">Pico a las 18:00 hrs</p>
+                        <div className="text-2xl font-bold">342</div>
+                        <p className="text-xs text-muted-foreground">Flujo normal esperado</p>
                     </CardContent>
                 </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Latencia Promedio IoT</CardTitle>
-                        <Fingerprint className="h-4 w-4 text-muted-foreground" />
+                <Card className="bg-card">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Nuevos Registros</CardTitle>
+                        <UserPlus className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">142 ms</div>
-                        <p className="text-xs text-green-500">Óptimo (&lt; 1s)</p>
+                        <div className="text-2xl font-bold">+24</div>
+                        <p className="text-xs text-muted-foreground">Solo en los últimos 7 días</p>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
-                    <CardHeader>
-                        <CardTitle>Flujo de Accesos (24h)</CardTitle>
-                        <CardDescription>
-                            Frecuencia de entradas a través del torniquete de validación facial.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                        <div className="h-[200px] w-full flex items-center justify-center border-dashed border-2 border-border rounded-lg bg-muted/20">
-                            <p className="text-muted-foreground text-sm">[Gráfico Recharts Aquí]</p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="col-span-3">
+            <div className="grid gap-8 lg:grid-cols-3">
+                <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle>Últimos Accesos</CardTitle>
-                        <CardDescription>Log en tiempo real de los agentes Edge.</CardDescription>
+                        <CardDescription>Monitoreo en tiempo real del ingreso a las instalaciones.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {[
-                                { name: "Carlos Mendoza", time: "Hace 2 min", status: "GRANTED", score: 0.92 },
-                                { name: "Ana Sofia Ruiz", time: "Hace 14 min", status: "GRANTED", score: 0.98 },
-                                { name: "Usuario Desconocido", time: "Hace 28 min", status: "DENIED", score: 0.45 },
-                            ].map((log, i) => (
-                                <div key={i} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center border">
-                                            <Fingerprint className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium leading-none">{log.name}</p>
-                                            <p className="text-xs text-muted-foreground">{log.time}</p>
-                                        </div>
-                                    </div>
-                                    <div className={`text-xs font-semibold px-2 py-1 rounded-full ${log.status === 'GRANTED' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                                        }`}>
-                                        {log.status} ({log.score})
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>Hora</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[
+                                    { name: "Juan Pérez", time: "Hace 2 min", status: "Permitido", statusColor: "text-green-500" },
+                                    { name: "María Gómez", time: "Hace 5 min", status: "Permitido", statusColor: "text-green-500" },
+                                    { name: "Carlos López", time: "Hace 12 min", status: "Denegado", statusColor: "text-red-500" },
+                                    { name: "Ana Torres", time: "Hace 15 min", status: "Permitido", statusColor: "text-green-500" },
+                                ].map((row, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell className="font-medium">{row.name}</TableCell>
+                                        <TableCell>{row.time}</TableCell>
+                                        <TableCell className={`font-semibold ${row.statusColor}`}>{row.status}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Accesos Rápidos</CardTitle>
+                        <CardDescription>Acciones principales del sistema.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Button className="w-full justify-start" size="lg">
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            + Nuevo Socio
+                        </Button>
+                        <Button className="w-full justify-start" variant="secondary" size="lg">
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            + Registrar Pago
+                        </Button>
+                        <Button className="w-full justify-start" variant="outline" size="lg">
+                            <Activity className="mr-2 h-4 w-4" />
+                            Evaluar Antigravity
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
-        </>
+        </div>
     );
 }
