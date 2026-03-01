@@ -16,7 +16,7 @@ export default async function AdminLayout({
     }
 
     // Verificar el rol del usuario en la tabla perfiles
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
         .from("perfiles")
         .select("rol")
         .eq("id", user.id)
@@ -26,7 +26,14 @@ export default async function AdminLayout({
 
     // Redirigir si no es super admin
     if (!isSuperAdmin) {
-        redirect("/dashboard");
+        return (
+            <div className="p-10 bg-red-900 text-white min-h-screen">
+                <h1 className="text-2xl font-bold mb-4">ACCESO DENEGADO (DEBUG MODE)</h1>
+                <p><strong>ID de Usuario:</strong> {user.id}</p>
+                <p><strong>Perfil Encontrado:</strong> {JSON.stringify(profile)}</p>
+                <p><strong>Error de Supabase:</strong> {JSON.stringify(error)}</p>
+            </div>
+        );
     }
 
     return (
