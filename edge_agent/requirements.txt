@@ -1,0 +1,24 @@
+# GymFlow Edge Agent Requirements
+
+# WebSockets and Supabase integration
+supabase[async]==2.3.4
+websockets==12.0
+
+# Image Processing and Matrix Math
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+Pillow==10.2.0
+
+# Hardware control (Raspberry Pi GPIO)
+# Note: For Jetson you might use Jetson.GPIO instead
+RPi.GPIO==0.7.1
+
+# AI/ML Libraries for Face Detection and Embeddings
+# Assuming use of a lightweight library like deepface or facenet-pytorch
+torch==2.2.0
+torchvision==0.17.0
+facenet-pytorch==2.5.3
+deepface==0.0.84
+
+# Environment variables
+python-dotenv==1.0.1
