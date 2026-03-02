@@ -6,6 +6,8 @@ import { getDashboardMetrics } from "@/app/actions/dashboard-actions";
 import Link from "next/link";
 import { RevenueChart } from "./components/RevenueChart";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
     const metrics = await getDashboardMetrics();
 

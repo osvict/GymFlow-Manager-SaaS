@@ -13,6 +13,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { verificarAccesoSocio } from "@/app/actions/access-actions";
@@ -121,8 +122,8 @@ export default function ControlAsistencia() {
 
             {/* MONITOR SECTION */}
             <div className={`w-full overflow-hidden rounded-xl border-4 transition-all duration-300 ${monitorStatus === 'idle' ? 'border-muted bg-card' :
-                    monitorStatus === 'granted' ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-lg shadow-emerald-500/20' :
-                        'border-destructive bg-destructive/5 shadow-lg shadow-destructive/20'
+                monitorStatus === 'granted' ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-lg shadow-emerald-500/20' :
+                    'border-destructive bg-destructive/5 shadow-lg shadow-destructive/20'
                 }`}>
                 <div className="flex flex-col md:flex-row min-h-[300px]">
                     {/* Left: Search & Input Panel */}

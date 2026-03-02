@@ -119,7 +119,7 @@ export async function verificarAccesoSocio(searchQuery: string) {
             socio: socioFound,
             membresia: {
                 vencimiento: membresia.fecha_fin,
-                plan: membresia.planes_suscripcion?.nombre || 'Plan Activo'
+                plan: (membresia.planes_suscripcion as any)?.nombre || 'Plan Activo'
             }
         };
 
