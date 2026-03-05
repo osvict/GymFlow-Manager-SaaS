@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import CameraCapture from "@/components/CameraCapture";
 import {
     Table,
     TableBody,
@@ -33,6 +35,7 @@ export default function GestorSocios() {
     const [isLoading, setIsLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
+    const [fotoBase64, setFotoBase64] = useState<string | null>(null);
 
     const supabase = createClient();
 
@@ -57,18 +60,70 @@ export default function GestorSocios() {
         fetchSocios();
     }, []);
 
-    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    // Función auxiliar para convertir Base64 a Blob
+    const dataURLtoBlob = (dataurl: string) => {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    };
+
+    const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+
+        if (!fotoBase64) {
+            toast.error("Por seguridad, la fotografía facial es obligatoria.");
+            return;
+        }
+
         const formData = new FormData(e.currentTarget);
 
         startTransition(async () => {
-            const result = await crearSocio(null, formData);
-            if (!result?.success || result?.error) {
-                toast.error(result?.error || "Error al procesar la solicitud.");
-            } else {
-                toast.success(result?.message || "Socio creado exitosamente.");
-                setOpen(false);
-                fetchSocios();
+            try {
+                // 1. Convertir Base64 a Blob para Storage
+                const fileBlob = dataURLtoBlob(fotoBase64);
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+
+                // 2. Subir a Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('fotos_socios')
+                    .upload(fileName, fileBlob, {
+                        contentType: 'image/jpeg',
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    console.error("Error al subir foto:", uploadError);
+                    toast.error("Error al guardar la fotografía en Storage.");
+                    return;
+                }
+
+                // 3. Obtener URL pública
+                const { data: { publicUrl } } = supabase.storage
+                    .from('fotos_socios')
+                    .getPublicUrl(fileName);
+
+                // 4. Inyectar URL en el formData final para el backend
+                formData.append('foto_url', publicUrl);
+
+                // 5. Llamar a la Server Action
+                const result = await crearSocio(null, formData);
+                if (!result?.success || result?.error) {
+                    toast.error(result?.error || "Error al procesar la solicitud.");
+                } else {
+                    toast.success(result?.message || "Socio creado exitosamente.");
+                    setOpen(false);
+                    setFotoBase64(null); // Limpiar preview local
+                    fetchSocios();
+                }
+            } catch (err) {
+                console.error(err);
+                toast.error("Error crítico durante el proceso de registro.");
             }
         });
     };
@@ -91,57 +146,62 @@ export default function GestorSocios() {
                         <DialogHeader>
                             <DialogTitle>Registrar Nuevo Socio</DialogTitle>
                             <DialogDescription>
-                                Agrega un integrante a la familia de tu gimnasio.
+                                Agrega un integrante a la familia de tu gimnasio. La captura facial es obligatoria.
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={onSubmit}>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="cedula" className="text-right">
-                                        Cédula
-                                    </Label>
-                                    <Input
-                                        id="cedula"
-                                        name="cedula"
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        placeholder="Solo números"
-                                        className="col-span-3"
-                                        required
-                                        disabled={isPending}
-                                        onChange={(e) => {
-                                            e.target.value = e.target.value.replace(/\D/g, '');
-                                        }}
-                                    />
+                            <div className="flex flex-col gap-6 py-4">
+                                <div className="flex justify-center w-full px-4">
+                                    <CameraCapture onCapture={setFotoBase64} />
                                 </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="nombre" className="text-right">
-                                        Nombre(s)
-                                    </Label>
-                                    <Input id="nombre" name="nombre" placeholder="Juan" className="col-span-3" required disabled={isPending} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="apellidos" className="text-right">
-                                        Apellidos
-                                    </Label>
-                                    <Input id="apellidos" name="apellidos" placeholder="Pérez" className="col-span-3" required disabled={isPending} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="correo" className="text-right">
-                                        Email
-                                    </Label>
-                                    <Input id="correo" name="correo" type="email" placeholder="Opcional" className="col-span-3" disabled={isPending} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="telefono" className="text-right">
-                                        Teléfono
-                                    </Label>
-                                    <Input id="telefono" name="telefono" type="tel" placeholder="+52..." className="col-span-3" disabled={isPending} />
+                                <div className="grid gap-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="cedula" className="text-right">
+                                            Cédula
+                                        </Label>
+                                        <Input
+                                            id="cedula"
+                                            name="cedula"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            placeholder="Solo números"
+                                            className="col-span-3"
+                                            required
+                                            disabled={isPending}
+                                            onChange={(e) => {
+                                                e.target.value = e.target.value.replace(/\D/g, '');
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="nombre" className="text-right">
+                                            Nombre(s)
+                                        </Label>
+                                        <Input id="nombre" name="nombre" placeholder="Juan" className="col-span-3" required disabled={isPending} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="apellidos" className="text-right">
+                                            Apellidos
+                                        </Label>
+                                        <Input id="apellidos" name="apellidos" placeholder="Pérez" className="col-span-3" required disabled={isPending} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="correo" className="text-right">
+                                            Email
+                                        </Label>
+                                        <Input id="correo" name="correo" type="email" placeholder="Opcional" className="col-span-3" disabled={isPending} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="telefono" className="text-right">
+                                            Teléfono
+                                        </Label>
+                                        <Input id="telefono" name="telefono" type="tel" placeholder="+52..." className="col-span-3" disabled={isPending} />
+                                    </div>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="submit" disabled={isPending}>
+                                <Button type="submit" disabled={isPending || !fotoBase64}>
                                     {isPending ? "Registrando..." : "Guardar Socio"}
                                 </Button>
                             </DialogFooter>
@@ -183,11 +243,18 @@ export default function GestorSocios() {
                                         {socio.cedula}
                                     </TableCell>
                                     <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                                                {socio.nombre.charAt(0)}{socio.apellidos.charAt(0)}
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-9 w-9 border">
+                                                {socio.foto_url ? (
+                                                    <AvatarImage src={socio.foto_url} alt={`Rostro de ${socio.nombre}`} className="object-cover" />
+                                                ) : null}
+                                                <AvatarFallback className="bg-primary/10 text-primary text-xs uppercase font-bold">
+                                                    {socio.nombre.charAt(0)}{socio.apellidos.charAt(0)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex flex-col">
+                                                <span>{socio.nombre} {socio.apellidos}</span>
                                             </div>
-                                            {socio.nombre} {socio.apellidos}
                                         </div>
                                     </TableCell>
                                     <TableCell>

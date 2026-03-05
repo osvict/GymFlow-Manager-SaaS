@@ -31,6 +31,7 @@ export async function crearSocio(prevState: any, formData: FormData) {
         const apellidos = formData.get("apellidos") as string;
         const correo = formData.get("correo") as string;
         const telefono = formData.get("telefono") as string;
+        const foto_url = formData.get("foto_url") as string;
 
         if (!cedula || !nombre || !apellidos) {
             return { error: "Cédula, nombre y apellidos son obligatorios." };
@@ -49,6 +50,7 @@ export async function crearSocio(prevState: any, formData: FormData) {
 
         if (correo) payload.correo = correo;
         if (telefono) payload.telefono = telefono;
+        if (foto_url) payload.foto_url = foto_url;
 
         const { error: insertError } = await supabase
             .from("socios")
