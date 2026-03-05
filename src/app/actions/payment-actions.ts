@@ -41,13 +41,14 @@ export async function abrirCaja(formData: FormData) {
         if (!user) return { success: false, error: "No autenticado" };
 
         const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
-        if (!profile?.tenant_id) return { success: false, error: "Sin tenant asignado" };
+        if (!profile?.tenant_id) {
+            return { success: false, error: "Error: No se encontró el gimnasio asignado al usuario." };
+        }
 
-        const montoStr = formData.get("monto_inicial") as string;
-        const monto_inicial = parseFloat(montoStr);
+        const montoInicial = parseFloat(formData.get('monto_inicial')?.toString() || '0');
 
-        if (isNaN(monto_inicial) || monto_inicial < 0) {
-            return { success: false, error: "Monto inicial inválido." };
+        if (isNaN(montoInicial) || montoInicial < 0) {
+            return { success: false, error: "Monto inicial inválido o mal formateado." };
         }
 
         // Prevenir colisiones: verificar que no haya ya una abierta
@@ -62,23 +63,24 @@ export async function abrirCaja(formData: FormData) {
             return { success: false, error: "Ya existe un turno abierto para este gimnasio." };
         }
 
-        const { error } = await supabase
+        const { error: insertError } = await supabase
             .from("sesiones_caja")
             .insert({
                 tenant_id: profile.tenant_id,
                 usuario_id: user.id,
-                monto_inicial
+                monto_inicial: montoInicial,
+                estado: 'abierta'
             });
 
-        if (error) {
-            console.error("Error al abrir caja:", error);
-            return { success: false, error: "Error BD al abrir sesión." };
+        if (insertError) {
+            console.error("Error BD Apertura de Caja:", insertError);
+            return { success: false, error: `Error exacto de BD: ${insertError.message}` };
         }
 
         revalidatePath("/dashboard/payments");
         return { success: true, message: "Turno iniciado. Caja Abierta." };
-    } catch (e) {
-        return { success: false, error: "Error interno del servidor." };
+    } catch (e: any) {
+        return { success: false, error: `Error interno del servidor: ${e.message}` };
     }
 }
 
