@@ -11,14 +11,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 import CameraCapture from "@/components/CameraCapture";
+import * as faceapi from '@vladmandic/face-api';
 // We import the new action
-import { verificarAccesoCedula } from "@/app/actions/acceso-actions";
+import { verificarAccesoCedula, obtenerSociosParaBiometria } from "@/app/actions/acceso-actions";
 
 export default function ControlAcceso() {
     const [isPending, startTransition] = useTransition();
     const [scanState, setScanState] = useState<"idle" | "permitido" | "denegado">("idle");
     const [lastTarget, setLastTarget] = useState<any>(null);
     const [message, setMessage] = useState<string>("");
+
+    // IA Biometrics
+    const [isModelLoaded, setIsModelLoaded] = useState(false);
+    const [faceMatcher, setFaceMatcher] = useState<faceapi.FaceMatcher | null>(null);
+    const [isBuildingMatcher, setIsBuildingMatcher] = useState(false);
+    const webcamRef = useRef<any>(null);
 
     // Beep Audios (Base64 short sounds to avoid latency fetching from public)
     const audioSuccess = useRef<HTMLAudioElement | null>(null);
@@ -28,7 +35,71 @@ export default function ControlAcceso() {
         // Init sounds on client side
         audioSuccess.current = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"); // Short placeholder for success
         audioError.current = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"); // Short placeholder for error
+
+        // Init Models Async
+        const loadModels = async () => {
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
+                setIsModelLoaded(true);
+                buildMatcher();
+            } catch (error) {
+                console.error("Error loading face models", error);
+                toast.error("Error al cargar los modelos de IA facial. Inténtelo más tarde.");
+            }
+        };
+
+        loadModels();
     }, []);
+
+    const buildMatcher = async () => {
+        setIsBuildingMatcher(true);
+        try {
+            const result = await obtenerSociosParaBiometria();
+            if (!result?.success || !result.socios) return;
+
+            const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
+
+            for (const socio of result.socios) {
+                if (!socio.foto_url) continue;
+
+                try {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous'; // CRITICAL FOR SUPABASE STORAGE CORS
+                    img.src = socio.foto_url;
+
+                    // Promisify Image Load
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+
+                    // Extracción profunda del tensor descriptor
+                    const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+
+                    if (detection) {
+                        // El Label es la cédula o el ID interno entero de la DB. Usaremos Cédula para reciclar el log manual.
+                        labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(socio.cedula, [detection.descriptor]));
+                    }
+                } catch (imgError) {
+                    console.error("No se pudo extraer el tensor de un socio:", socio.cedula, imgError);
+                }
+            }
+
+            if (labeledDescriptors.length > 0) {
+                const matcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6); // 0.6 Strictness Confidence
+                setFaceMatcher(matcher);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsBuildingMatcher(false);
+        }
+    };
 
     const playSuccess = () => audioSuccess.current?.play().catch(() => { });
     const playError = () => audioError.current?.play().catch(() => { });
@@ -36,13 +107,7 @@ export default function ControlAcceso() {
     // Focus input automatically after scan for fast keyboard mapping
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const onManualSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const cedulaObj = new FormData(e.currentTarget);
-        const cedula = cedulaObj.get("cedula") as string;
-
-        if (!cedula) return;
-
+    const executeCheckInCycle = (cedula: string) => {
         startTransition(async () => {
             const result = await verificarAccesoCedula(cedula);
 
@@ -81,8 +146,54 @@ export default function ControlAcceso() {
         });
     };
 
-    const simularEscaneoFacial = () => {
-        toast.info("Cargando y sincronizando modelos biométricos...");
+    const onManualSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const cedulaObj = new FormData(e.currentTarget);
+        const cedula = cedulaObj.get("cedula") as string;
+
+        if (!cedula) return;
+
+        // LLAMADA FINAL DEL BOTON VERIFICAR (MANUAL)
+        executeCheckInCycle(cedula);
+    };
+
+    const escanearRostroActual = async () => {
+        if (!isModelLoaded || !faceMatcher || !webcamRef.current) {
+            toast.warning("Los modelos neuronales siguen cargando o no hay webcams...");
+            return;
+        }
+
+        try {
+            const videoElement = webcamRef.current.video;
+            if (!videoElement) return;
+
+            toast.info("Analizando mapa facial, no se mueva...");
+
+            const detection = await faceapi.detectSingleFace(videoElement).withFaceLandmarks().withFaceDescriptor();
+
+            if (!detection) {
+                setScanState("denegado");
+                setLastTarget({ nombre: "Misterio", apellidos: "?", foto_url: null });
+                setMessage("Rostro no detectado / Muévase a la luz");
+                playError();
+                return;
+            }
+
+            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+
+            if (bestMatch.label === "unknown") {
+                setScanState("denegado");
+                setLastTarget({ nombre: "Visita", apellidos: "No Registrada", foto_url: null });
+                setMessage("Rostro NO reconocido en el Gimnasio.");
+                playError();
+            } else {
+                // bestMatch.label = Cédula almacenada del Socio
+                executeCheckInCycle(bestMatch.label);
+            }
+        } catch (error) {
+            console.error("AI Error:", error);
+            toast.error("Hubo un error evaluando los vectores faciales.");
+        }
     };
 
     return (
@@ -113,19 +224,37 @@ export default function ControlAcceso() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col items-center justify-center p-6 flex-1 gap-6 bg-slate-50/50 dark:bg-slate-900/20">
-                        {/* Placeholder Visual Gigante para la Cámara */}
+                        {/* Placeholder Visual o Feed Real */}
                         <div className="w-full max-w-md aspect-video bg-black rounded-lg border-4 border-dashed border-slate-700 overflow-hidden relative shadow-inner">
-                            <div className="absolute inset-0 flex items-center justify-center opacity-50">
-                                <ScanFace className="w-32 h-32 text-slate-500 animate-pulse" />
-                            </div>
+                            <video
+                                ref={(ref) => {
+                                    if (ref) {
+                                        webcamRef.current = { video: ref };
+                                        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+                                            ref.srcObject = stream;
+                                            ref.play();
+                                        });
+                                    }
+                                }}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                playsInline
+                                muted
+                            />
                             {/* Scanning Laser Line Effect */}
                             <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_3px_rgba(34,197,94,0.5)] animate-[scan_3s_ease-in-out_infinite]" />
                         </div>
                         <Button
-                            className="w-full max-w-md h-16 text-lg font-bold uppercase tracking-wider"
-                            onClick={simularEscaneoFacial}
+                            className="w-full max-w-md h-16 text-lg font-bold uppercase tracking-wider relative overflow-hidden"
+                            onClick={escanearRostroActual}
+                            disabled={!isModelLoaded || isBuildingMatcher}
                         >
-                            <ScanFace className="mr-3 w-6 h-6" /> Escanear Rostro
+                            <ScanFace className="mr-3 w-6 h-6" />
+                            {isBuildingMatcher ? "Calculando Matrices Locales..." : !isModelLoaded ? "Cargando IA..." : "Escanear Rostro"}
+
+                            {(isBuildingMatcher || !isModelLoaded) && (
+                                <div className="absolute inset-0 bg-primary/20 animate-pulse" />
+                            )}
                         </Button>
                     </CardContent>
                 </Card>
@@ -169,8 +298,8 @@ export default function ControlAcceso() {
 
                     {/* Tarjeta de Feedback Masivo (Giant Alert) */}
                     <Card className={`flex-1 flex flex-col border-4 overflow-hidden transition-colors duration-500 shadow-lg ${scanState === "permitido" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30" :
-                            scanState === "denegado" ? "border-red-500 bg-red-50 dark:bg-red-950/30" :
-                                "border-slate-200 dark:border-slate-800 bg-card"
+                        scanState === "denegado" ? "border-red-500 bg-red-50 dark:bg-red-950/30" :
+                            "border-slate-200 dark:border-slate-800 bg-card"
                         }`}>
                         <CardContent className="flex-1 flex flex-col lg:flex-row items-center justify-center p-8 lg:p-12 gap-8 text-center lg:text-left">
                             {scanState === "idle" ? (

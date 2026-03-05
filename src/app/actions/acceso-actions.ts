@@ -78,3 +78,36 @@ export async function verificarAccesoCedula(cedula: string) {
         return { success: false, error: "Error interno del servidor al verificar acceso." };
     }
 }
+
+export async function obtenerSociosParaBiometria() {
+    try {
+        const supabase = await createClient();
+
+        // 1. Contexto Seguro
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: "No autorizado" };
+
+        const { data: profile } = await supabase
+            .from("perfiles")
+            .select("tenant_id")
+            .eq("id", user.id)
+            .single();
+
+        if (!profile?.tenant_id) return { success: false, error: "Sin gimnasio asignado" };
+
+        // 2. Traer solo socios vitales para IA con foto válida
+        const { data: socios, error } = await supabase
+            .from("socios")
+            .select("id, cedula, nombre, apellidos, foto_url")
+            .eq("tenant_id", profile.tenant_id)
+            .eq("estado", "activo")
+            .not("foto_url", "is", null);
+
+        if (error) throw error;
+
+        return { success: true, count: socios?.length || 0, socios: socios || [] };
+    } catch (e: any) {
+        console.error("Error al obtener biblioteca biométrica:", e);
+        return { success: false, error: "Error del servidor." };
+    }
+}
