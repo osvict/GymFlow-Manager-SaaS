@@ -196,8 +196,32 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
 
         const monto = plan.precio;
         const tenant_id = profile.tenant_id;
-        const fecha_inicio = new Date();
-        const fecha_fin = new Date(fecha_inicio);
+
+        // --- LOGICA DE ANNIVERSARY BILLING ---
+        const { data: socioCurrent } = await supabase
+            .from("socios")
+            .select("vencimiento_membresia")
+            .eq("id", socio_id)
+            .single();
+
+        let fecha_base = new Date(); // Por default, empujamos a la fecha actual
+
+        if (socioCurrent && socioCurrent.vencimiento_membresia) {
+            const venc_db = new Date(socioCurrent.vencimiento_membresia + 'T00:00:00'); // Fuerza timezone local
+            const ahora = new Date();
+            ahora.setHours(0, 0, 0, 0);
+
+            // Si el socio TODAVÍA TIENE DÍAS (no ha vencido), su "fecha base" arranca desde su vencimiento acumulado
+            if (venc_db >= ahora) {
+                fecha_base = venc_db;
+                console.log(`[Anniversary Billing]: El socio paga anticipadamente. Respetando su fecha_base en: ${fecha_base}`);
+            } else {
+                console.log(`[Anniversary Billing]: El socio estaba vencido desde ${venc_db}. Reiniciando fecha desde HOY.`);
+            }
+        }
+
+        const fecha_inicio = new Date(); // La compra sí o sí ocurre hoy.
+        const fecha_fin = new Date(fecha_base);
 
         switch (plan.periodo) {
             case "DIARIO": fecha_fin.setDate(fecha_fin.getDate() + 1); break;
@@ -266,7 +290,12 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             // No hacemos rollback para no quitarle el acceso al cliente, pero queda dispar la caja chica asíncrona.
         }
 
-        await supabase.from("socios").update({ estado: 'activo' }).eq("id", socio_id);
+        console.log("4. Aplicando FACTURACIÓN DE ANIVERSARIO al Registro del Socio...");
+        await supabase.from("socios").update({
+            estado: 'activo',
+            vencimiento_membresia: fecha_fin.toISOString().split('T')[0],
+            ultimo_pago: new Date().toISOString()
+        }).eq("id", socio_id);
 
         console.log("----- TRANSACCIÓN DE TURNO DE CAJA CULMINADA -----");
         revalidatePath("/dashboard/payments");

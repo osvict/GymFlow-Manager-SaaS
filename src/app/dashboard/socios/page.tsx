@@ -218,7 +218,7 @@ export default function GestorSocios() {
                             <TableHead>Nombre Completo</TableHead>
                             <TableHead>Contacto</TableHead>
                             <TableHead>Estado</TableHead>
-                            <TableHead>Fecha Ingreso</TableHead>
+                            <TableHead>Vencimiento Plan</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -274,10 +274,31 @@ export default function GestorSocios() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        <span className="flex items-center gap-1 text-muted-foreground">
-                                            <Calendar className="h-3 w-3" />
-                                            {new Date(socio.fecha_registro).toLocaleDateString()}
-                                        </span>
+                                        {(() => {
+                                            if (!socio.vencimiento_membresia) {
+                                                return <Badge variant="outline" className="text-muted-foreground border-dashed">Sin Plan</Badge>;
+                                            }
+
+                                            // Evaluamos contra hoy en tiempo local (truncamos a las 00:00)
+                                            const expDate = new Date(socio.vencimiento_membresia + 'T00:00:00');
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+
+                                            const isExpired = expDate < today;
+
+                                            return (
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <span className="flex items-center gap-1 font-mono text-sm">
+                                                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                                                        {expDate.toLocaleDateString()}
+                                                    </span>
+                                                    <Badge variant={isExpired ? "destructive" : "default"}
+                                                        className={!isExpired ? "bg-emerald-100/80 text-emerald-800 hover:bg-emerald-100 border-none" : ""}>
+                                                        {isExpired ? "Vencido" : "Activo"}
+                                                    </Badge>
+                                                </div>
+                                            );
+                                        })()}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon">
