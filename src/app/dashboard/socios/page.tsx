@@ -28,13 +28,15 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { crearSocio } from "@/app/actions/socio-actions";
+import { crearSocio, actualizarSocio } from "@/app/actions/socio-actions";
 
 export default function GestorSocios() {
     const [socios, setSocios] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
+    const [openEditDialog, setOpenEditDialog] = useState(false);
+    const [editingSocio, setEditingSocio] = useState<any>(null);
     const [fotoBase64, setFotoBase64] = useState<string | null>(null);
 
     const supabase = createClient();
@@ -124,6 +126,27 @@ export default function GestorSocios() {
             } catch (err) {
                 console.error(err);
                 toast.error("Error crítico durante el proceso de registro.");
+            }
+        });
+    };
+
+    const handleEditClick = (socio: any) => {
+        setEditingSocio(socio);
+        setOpenEditDialog(true);
+    };
+
+    const onEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        startTransition(async () => {
+            const result = await actualizarSocio(null, formData);
+            if (result?.error) toast.error(result.error);
+            else if (result?.success) {
+                toast.success(result.message);
+                setOpenEditDialog(false);
+                setEditingSocio(null);
+                fetchSocios();
             }
         });
     };
@@ -301,7 +324,7 @@ export default function GestorSocios() {
                                         })()}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(socio)}>
                                             <Edit className="h-4 w-4 text-muted-foreground" />
                                             <span className="sr-only">Editar Socio</span>
                                         </Button>
@@ -312,6 +335,47 @@ export default function GestorSocios() {
                     </TableBody>
                 </Table>
             </div>
+
+            {/* MODAL DE EDICIÓN */}
+            <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Editar Socio</DialogTitle>
+                        <DialogDescription>
+                            Modifica los datos de contacto. La cédula {editingSocio?.cedula} no puede alterarse.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {editingSocio && (
+                        <form onSubmit={onEditSubmit}>
+                            <input type="hidden" name="id" value={editingSocio.id} />
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-nombre" className="text-right">Nombre(s)</Label>
+                                    <Input id="edit-nombre" name="nombre" defaultValue={editingSocio.nombre} className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-apellidos" className="text-right">Apellidos</Label>
+                                    <Input id="edit-apellidos" name="apellidos" defaultValue={editingSocio.apellidos} className="col-span-3" required disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-correo" className="text-right">Email</Label>
+                                    <Input id="edit-correo" name="correo" type="email" defaultValue={editingSocio.correo || ''} className="col-span-3" disabled={isPending} />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-telefono" className="text-right">Teléfono</Label>
+                                    <Input id="edit-telefono" name="telefono" type="tel" defaultValue={editingSocio.telefono || ''} className="col-span-3" disabled={isPending} />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isPending}>
+                                    {isPending ? "Actualizando..." : "Guardar Cambios"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 }

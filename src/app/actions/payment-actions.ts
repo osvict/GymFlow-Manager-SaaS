@@ -192,7 +192,9 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             .eq("id", plan_id)
             .single();
 
-        if (planError || !plan) return { error: "Plan inválido." };
+        if (planError || !plan) {
+            return { success: false, error: "Error: El plan seleccionado no existe o no es válido." };
+        }
 
         const monto = plan.precio;
         const tenant_id = profile.tenant_id;
