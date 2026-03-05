@@ -26,17 +26,23 @@ export async function crearSocio(prevState: any, formData: FormData) {
             return { error: "Acceso denegado. Se requiere ser admin_gym o staff." };
         }
 
+        const cedula = formData.get("cedula") as string;
         const nombre = formData.get("nombre") as string;
         const apellidos = formData.get("apellidos") as string;
         const correo = formData.get("correo") as string;
         const telefono = formData.get("telefono") as string;
 
-        if (!nombre || !apellidos) {
-            return { error: "El nombre y apellidos son obligatorios." };
+        if (!cedula || !nombre || !apellidos) {
+            return { error: "Cédula, nombre y apellidos son obligatorios." };
+        }
+
+        if (!/^\d+$/.test(cedula)) {
+            return { error: "La cédula debe contener exclusivamente números." };
         }
 
         const payload: any = {
             tenant_id: profile.tenant_id, // Hardcoded from backend, never trust client
+            cedula,
             nombre,
             apellidos,
         };
@@ -50,8 +56,11 @@ export async function crearSocio(prevState: any, formData: FormData) {
 
         if (error) {
             console.error("Error creating socio:", error);
-            // Manejo de error único por correo
+            // Manejo de error único (cédula o correo)
             if (error.code === '23505') {
+                if (error.message.includes("cedula")) {
+                    return { error: "Ya existe un socio registrado con esta cédula." };
+                }
                 return { error: "Ya existe un socio registrado con este correo." };
             }
             return { error: "Hubo un error al registrar el socio." };

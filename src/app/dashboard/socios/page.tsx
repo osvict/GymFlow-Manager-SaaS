@@ -97,6 +97,25 @@ export default function GestorSocios() {
                         <form onSubmit={onSubmit}>
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="cedula" className="text-right">
+                                        Cédula
+                                    </Label>
+                                    <Input
+                                        id="cedula"
+                                        name="cedula"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        placeholder="Solo números"
+                                        className="col-span-3"
+                                        required
+                                        disabled={isPending}
+                                        onChange={(e) => {
+                                            e.target.value = e.target.value.replace(/\D/g, '');
+                                        }}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="nombre" className="text-right">
                                         Nombre(s)
                                     </Label>
@@ -135,6 +154,7 @@ export default function GestorSocios() {
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead>Cédula</TableHead>
                             <TableHead>Nombre Completo</TableHead>
                             <TableHead>Contacto</TableHead>
                             <TableHead>Estado</TableHead>
@@ -145,13 +165,13 @@ export default function GestorSocios() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                     Cargando socios...
                                 </TableCell>
                             </TableRow>
                         ) : socios.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground flex-col items-center">
+                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground flex-col items-center">
                                     <User className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
                                     No hay socios registrados aún.
                                 </TableCell>
@@ -159,6 +179,9 @@ export default function GestorSocios() {
                         ) : (
                             socios.map((socio) => (
                                 <TableRow key={socio.id}>
+                                    <TableCell className="font-mono text-sm">
+                                        {socio.cedula}
+                                    </TableCell>
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
                                             <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
