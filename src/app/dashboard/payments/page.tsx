@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { registrarPagoYMembresia, getSesionCajaActiva, abrirCaja, cerrarCaja, registrarEgreso } from "@/app/actions/payment-actions";
@@ -22,6 +24,7 @@ export default function CajaPOS() {
 
     const [socios, setSocios] = useState<any[]>([]);
     const [planes, setPlanes] = useState<any[]>([]);
+    const [historial, setHistorial] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // React18 Transitions for all Server Action states
@@ -51,30 +54,68 @@ export default function CajaPOS() {
             else if (!planesData || planesData.length === 0) { toast.warning("No hay planes activos."); setPlanes([]); }
             else { setPlanes(planesData); }
 
-            // 3. Obtener Movimientos Financieros para las Tarjetas
+            // 3. Obtener Movimientos Financieros para las Tarjetas e Historial
             const { data: movimientos } = await supabase
                 .from("movimientos_caja")
-                .select("tipo, monto, metodo_pago")
-                .eq("sesion_caja_id", activa.id);
+                .select("id, tipo, concepto, monto, metodo_pago, created_at, referencia_externa_id")
+                .eq("sesion_caja_id", activa.id)
+                .order("created_at", { ascending: false });
 
             let efec = Number(activa.monto_inicial);
             let tarj = 0;
             let trans = 0;
+            let arrHistorial: any[] = [];
 
-            if (movimientos) {
-                movimientos.forEach(mov => {
+            if (movimientos && movimientos.length > 0) {
+                // Para obtener nombres reales de los socios si el ingreso fue membresía
+                const pagosIds = movimientos.filter(m => m.tipo === 'ingreso' && m.referencia_externa_id).map(m => m.referencia_externa_id);
+                let pagosNombres: Record<string, string> = {};
+
+                if (pagosIds.length > 0) {
+                    const { data: pagosData } = await supabase
+                        .from("pagos")
+                        .select("id, socio_id:socios(nombre, apellidos)")
+                        .in("id", pagosIds);
+
+                    if (pagosData) {
+                        pagosData.forEach((p: any) => {
+                            // En supabase-js, las columnas foreign forzadas con alias llegan como objetos anidados
+                            if (p.socio_id && !Array.isArray(p.socio_id)) {
+                                pagosNombres[p.id] = `${p.socio_id.nombre} ${p.socio_id.apellidos}`;
+                            }
+                        });
+                    }
+                }
+
+                arrHistorial = movimientos.map(mov => {
                     const factor = mov.tipo === 'ingreso' ? 1 : -1;
                     if (mov.metodo_pago === 'efectivo') efec += Number(mov.monto) * factor;
                     if (mov.metodo_pago === 'tarjeta') tarj += Number(mov.monto) * factor;
                     if (mov.metodo_pago === 'transferencia') trans += Number(mov.monto) * factor;
+
+                    let conceptoFinal = mov.concepto;
+                    if (mov.tipo === 'ingreso' && mov.referencia_externa_id && pagosNombres[mov.referencia_externa_id]) {
+                        conceptoFinal = `Membresía - ${pagosNombres[mov.referencia_externa_id]}`;
+                    }
+
+                    return {
+                        id: mov.id,
+                        hora: mov.created_at,
+                        concepto: conceptoFinal,
+                        tipo: mov.tipo,
+                        metodo: mov.metodo_pago,
+                        monto: mov.monto
+                    };
                 });
             }
 
             setBalanceEfectivo(efec);
             setBalanceTarjeta(tarj);
             setBalanceTransf(trans);
+            setHistorial(arrHistorial);
         } else {
             setSesion(null); // Caja Cerrada
+            setHistorial([]);
         }
 
         setIsLoading(false);
@@ -361,6 +402,61 @@ export default function CajaPOS() {
                 </TabsContent>
 
             </Tabs>
+
+            {/* HISTORIAL DE MOVIMIENTOS */}
+            <Card className="mt-8 border shadow-sm rounded-xl overflow-hidden">
+                <CardHeader className="bg-slate-50 border-b dark:bg-slate-900/50">
+                    <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <Receipt className="w-5 h-5 text-slate-500" /> Historial de Movimientos
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {historial.length === 0 ? (
+                        <div className="p-10 text-center text-muted-foreground font-medium">
+                            Aún no hay movimientos en este turno.
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader className="bg-slate-50/50">
+                                <TableRow>
+                                    <TableHead className="w-[100px] text-center">Hora</TableHead>
+                                    <TableHead>Concepto</TableHead>
+                                    <TableHead>Método</TableHead>
+                                    <TableHead className="text-center">Tipo</TableHead>
+                                    <TableHead className="text-right">Monto</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {historial.map((mov) => (
+                                    <TableRow key={mov.id} className="hover:bg-slate-50/50">
+                                        <TableCell className="text-center font-medium text-slate-500">
+                                            {new Date(mov.hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </TableCell>
+                                        <TableCell className="font-semibold text-slate-700 dark:text-slate-300">
+                                            {mov.concepto}
+                                        </TableCell>
+                                        <TableCell className="capitalize text-slate-600">
+                                            {mov.metodo}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge variant={mov.tipo === 'ingreso' ? 'default' : 'destructive'}
+                                                className={mov.tipo === 'ingreso'
+                                                    ? 'bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100 border-none'
+                                                    : 'bg-rose-100/80 text-rose-700 hover:bg-rose-100 border-none'}>
+                                                {mov.tipo}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className={`text-right font-mono font-bold text-lg ${mov.tipo === 'ingreso' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {mov.tipo === 'ingreso' ? '+' : '-'}{fmtMoneda(mov.monto)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
         </div>
     );
 }
