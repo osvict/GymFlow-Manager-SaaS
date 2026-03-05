@@ -40,22 +40,16 @@ export default function ControlAcceso() {
         // Init Models Async
         const loadModels = async () => {
             try {
-                if (typeof window !== 'undefined') {
-                    faceapi.env.monkeyPatch({
-                        Canvas: HTMLCanvasElement,
-                        Image: HTMLImageElement,
-                        Video: HTMLVideoElement
-                    });
-                }
-                const MODEL_URL = '/models';
-
                 // 1. Configurar WebGL como motor principal
                 // @ts-ignore
                 await faceapi.tf.setBackend('webgl');
                 // 2. Esperar a que el motor reporte que está listo
                 // @ts-ignore
                 await faceapi.tf.ready();
+                // @ts-ignore
+                console.log("Backend TF listo:", faceapi.tf.getBackend());
 
+                const MODEL_URL = '/models';
                 // Ahora sí, carga los modelos...
                 await Promise.all([
                     faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
