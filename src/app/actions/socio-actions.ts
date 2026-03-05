@@ -29,7 +29,7 @@ export async function crearSocio(prevState: any, formData: FormData) {
         const cedula = formData.get("cedula") as string;
         const nombre = formData.get("nombre") as string;
         const apellidos = formData.get("apellidos") as string;
-        const correo = formData.get("correo") as string;
+        const correo = formData.get("email") as string;
         const telefono = formData.get("telefono") as string;
         const foto_url = formData.get("foto_url") as string;
         const huella_digital = formData.get("huella_digital") as string;
@@ -145,37 +145,28 @@ export async function actualizarSocio(prevState: any, formData: FormData) {
         }
 
         const id = formData.get("id") as string;
-        const nombre = formData.get("nombre") as string;
-        const apellidos = formData.get("apellidos") as string;
-        const correo = formData.get("correo") as string;
-        const telefono = formData.get("telefono") as string;
-        const huella_digital = formData.get("huella_digital") as string;
-        const foto_url = formData.get("foto_url") as string;
-        const plan_id = formData.get("plan_id") as string;
 
-        if (!id || !nombre || !apellidos) {
-            return { error: "ID, nombre y apellidos son obligatorios." };
-        }
+        console.log("Datos recibidos para editar:", Object.fromEntries(formData.entries()));
 
-        const payload: any = {
-            nombre,
-            apellidos,
+        const updateData = {
+            nombre: formData.get('nombre')?.toString().trim(),
+            apellidos: formData.get('apellidos')?.toString().trim(),
+            email: formData.get('email')?.toString().trim() || null,
+            telefono: formData.get('telefono')?.toString().trim() || null,
+            plan_id: formData.get('plan_id')?.toString() || null,
+            foto_url: formData.get('foto_url')?.toString() || null,
+            huella_digital: formData.get('huella_digital')?.toString() || null,
         };
 
-        if (correo) payload.email = correo;
-        if (telefono) payload.telefono = telefono;
-        if (huella_digital) payload.huella_digital = huella_digital;
-        if (foto_url) payload.foto_url = foto_url;
-
-        // Si envían plan_id desde editar, opcionalmente podríamos registrar una nueva membresia,
-        // pero por ahora el requisito principal es atraparlo en el submit y pasarlo al DB si fuese pertinente.
-        // No alteramos la regla de negocio de Caja sin instrucciones claras.
+        if (!id || !updateData.nombre || !updateData.apellidos) {
+            return { error: "ID, nombre y apellidos son obligatorios." };
+        }
 
         // Por requerimiento del TPM: "la cédula no se edita por seguridad"
 
         const { error: updateError } = await supabase
             .from("socios")
-            .update(payload)
+            .update(updateData)
             .eq("id", id)
             .eq("tenant_id", profile.tenant_id); // RLS redundancy check
 

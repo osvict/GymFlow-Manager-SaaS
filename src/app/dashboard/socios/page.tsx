@@ -183,7 +183,7 @@ export default function GestorSocios() {
                     const { data: { publicUrl } } = supabase.storage
                         .from('fotos_socios').getPublicUrl(fileName);
 
-                    formData.append('foto_url', publicUrl);
+                    formData.set('foto_url', publicUrl);
                 }
 
                 const result = await actualizarSocio(null, formData);
@@ -297,7 +297,7 @@ export default function GestorSocios() {
                                         <Label htmlFor="correo" className="text-right">
                                             Email
                                         </Label>
-                                        <Input id="correo" name="correo" type="email" placeholder="Opcional" className="col-span-3" disabled={isPending} />
+                                        <Input id="correo" name="email" type="email" placeholder="Opcional" className="col-span-3" disabled={isPending} />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="telefono" className="text-right">
@@ -433,6 +433,7 @@ export default function GestorSocios() {
                         <form onSubmit={onEditSubmit}>
                             <input type="hidden" name="id" value={editingSocio.id} />
                             <input type="hidden" name="huella_digital" value={huellaString || editingSocio.huella_digital || ''} />
+                            <input type="hidden" name="foto_url" value={editingSocio.foto_url || ''} />
 
                             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full px-4 mb-4 mt-2">
                                 <div className="flex flex-col items-center justify-center">
@@ -501,7 +502,7 @@ export default function GestorSocios() {
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-correo" className="text-right">Email</Label>
-                                    <Input id="edit-correo" name="correo" type="email" defaultValue={editingSocio.correo || ''} className="col-span-3" disabled={isPending} />
+                                    <Input id="edit-correo" name="email" type="email" defaultValue={editingSocio.email || editingSocio.correo || ''} className="col-span-3" disabled={isPending} />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-telefono" className="text-right">Teléfono</Label>
