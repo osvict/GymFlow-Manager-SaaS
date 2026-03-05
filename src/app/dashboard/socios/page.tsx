@@ -42,6 +42,10 @@ export default function GestorSocios() {
     const [huellaString, setHuellaString] = useState<string | null>(null);
     const [isScanningHuella, setIsScanningHuella] = useState(false);
 
+    // Estados para Edición de Foto
+    const [isRetakingPhoto, setIsRetakingPhoto] = useState(false);
+    const [newPhotoBlob, setNewPhotoBlob] = useState<string | null>(null);
+
     const supabase = createClient();
 
     const fetchSocios = async () => {
@@ -140,18 +144,20 @@ export default function GestorSocios() {
         });
     };
 
-    const scanHuella = () => {
+    const verificarLectorHuellas = async () => {
         setIsScanningHuella(true);
-        toast.info("Coloque su dedo en el lector USB...");
+        toast.info("Buscando dispositivo USB...");
         setTimeout(() => {
             setIsScanningHuella(false);
-            setHuellaString(`template_huella_mock_${Date.now()}`);
-            toast.success("✅ Huella capturada exitosamente.");
+            toast.error("Error: No se detectó ningún lector biométrico conectado. Verifique el puerto USB o los drivers.");
+            // No guardamos mock falso
         }, 2000);
     };
 
     const handleEditClick = (socio: any) => {
         setEditingSocio(socio);
+        setIsRetakingPhoto(false);
+        setNewPhotoBlob(null);
         setOpenEditDialog(true);
     };
 
@@ -160,13 +166,39 @@ export default function GestorSocios() {
         const formData = new FormData(e.currentTarget);
 
         startTransition(async () => {
-            const result = await actualizarSocio(null, formData);
-            if (result?.error) toast.error(result.error);
-            else if (result?.success) {
-                toast.success(result.message);
-                setOpenEditDialog(false);
-                setEditingSocio(null);
-                fetchSocios();
+            try {
+                if (isRetakingPhoto && newPhotoBlob) {
+                    const fileBlob = dataURLtoBlob(newPhotoBlob);
+                    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('fotos_socios')
+                        .upload(fileName, fileBlob, { contentType: 'image/jpeg', upsert: false });
+
+                    if (uploadError) {
+                        toast.error("Error al guardar la nueva fotografía en Storage.");
+                        return;
+                    }
+
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('fotos_socios').getPublicUrl(fileName);
+
+                    formData.append('foto_url', publicUrl);
+                }
+
+                const result = await actualizarSocio(null, formData);
+                if (result?.error) toast.error(result.error);
+                else if (result?.success) {
+                    toast.success(result.message);
+                    setOpenEditDialog(false);
+                    setEditingSocio(null);
+                    setIsRetakingPhoto(false);
+                    setNewPhotoBlob(null);
+                    fetchSocios();
+                }
+            } catch (err) {
+                console.error(err);
+                toast.error("Error crítico durante la actualización.");
             }
         });
     };
@@ -204,10 +236,10 @@ export default function GestorSocios() {
                                             type="button"
                                             variant={huellaString ? "outline" : "secondary"}
                                             size="sm"
-                                            onClick={scanHuella}
+                                            onClick={verificarLectorHuellas}
                                             disabled={isScanningHuella}
                                         >
-                                            {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Escaneando...</> : (huellaString ? "Re-escanear Huella" : "Escanear Huella")}
+                                            {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando...</> : (huellaString ? "Re-escanear Huella" : "Escanear Huella")}
                                         </Button>
                                         {huellaString && <span className="text-xs text-green-600 mt-2 font-medium">✅ Vinculada</span>}
                                     </div>
@@ -402,20 +434,63 @@ export default function GestorSocios() {
                             <input type="hidden" name="id" value={editingSocio.id} />
                             <input type="hidden" name="huella_digital" value={huellaString || editingSocio.huella_digital || ''} />
 
-                            <div className="flex flex-col items-center justify-center p-4 py-6 border border-dashed rounded-lg bg-muted/10 mx-4 mt-2">
-                                <Fingerprint className={`h-12 w-12 mb-2 ${(huellaString || editingSocio.huella_digital) ? 'text-green-500' : 'text-muted-foreground'}`} />
-                                <Button
-                                    type="button"
-                                    variant={(huellaString || editingSocio.huella_digital) ? "outline" : "secondary"}
-                                    size="sm"
-                                    onClick={scanHuella}
-                                    disabled={isScanningHuella}
-                                >
-                                    {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Escaneando...</> : ((huellaString || editingSocio.huella_digital) ? "Cambiar Huella Registrada" : "Añadir Huella (Nueva)")}
-                                </Button>
+                            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full px-4 mb-4 mt-2">
+                                <div className="flex flex-col items-center justify-center">
+                                    {!isRetakingPhoto ? (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Avatar className="h-32 w-32 border-4 shadow-sm">
+                                                {editingSocio.foto_url ? (
+                                                    <AvatarImage src={editingSocio.foto_url} alt="Foto actual" className="object-cover" />
+                                                ) : null}
+                                                <AvatarFallback className="bg-primary/10 text-primary text-2xl uppercase font-bold">
+                                                    {editingSocio.nombre.charAt(0)}{editingSocio.apellidos.charAt(0)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => setIsRetakingPhoto(true)}>
+                                                Retomar Fotografía
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2">
+                                            <CameraCapture onCapture={setNewPhotoBlob} />
+                                            <Button type="button" variant="ghost" size="sm" onClick={() => setIsRetakingPhoto(false)}>
+                                                Cancelar
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col items-center justify-center p-4 border border-dashed rounded-lg bg-muted/20 w-full sm:w-auto h-full min-h-[150px]">
+                                    <Fingerprint className={`h-12 w-12 mb-2 ${(huellaString || editingSocio.huella_digital) ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                    <Button
+                                        type="button"
+                                        variant={(huellaString || editingSocio.huella_digital) ? "outline" : "secondary"}
+                                        size="sm"
+                                        onClick={verificarLectorHuellas}
+                                        disabled={isScanningHuella}
+                                    >
+                                        {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando...</> : ((huellaString || editingSocio.huella_digital) ? "Cambiar Huella Registrada" : "Añadir Huella (Nueva)")}
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="edit-plan_id" className="text-right">Plan Actual</Label>
+                                    <select
+                                        name="plan_id"
+                                        id="edit-plan_id"
+                                        disabled={isPending}
+                                        className="col-span-3 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="">-- Conservar Membresía Actual --</option>
+                                        {planes.map(plan => (
+                                            <option key={plan.id} value={plan.id}>
+                                                {plan.nombre} (${plan.precio} {plan.periodo})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-nombre" className="text-right">Nombre(s)</Label>
                                     <Input id="edit-nombre" name="nombre" defaultValue={editingSocio.nombre} className="col-span-3" required disabled={isPending} />

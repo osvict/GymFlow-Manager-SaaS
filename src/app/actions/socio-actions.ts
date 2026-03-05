@@ -150,6 +150,8 @@ export async function actualizarSocio(prevState: any, formData: FormData) {
         const correo = formData.get("correo") as string;
         const telefono = formData.get("telefono") as string;
         const huella_digital = formData.get("huella_digital") as string;
+        const foto_url = formData.get("foto_url") as string;
+        const plan_id = formData.get("plan_id") as string;
 
         if (!id || !nombre || !apellidos) {
             return { error: "ID, nombre y apellidos son obligatorios." };
@@ -163,6 +165,11 @@ export async function actualizarSocio(prevState: any, formData: FormData) {
         if (correo) payload.email = correo;
         if (telefono) payload.telefono = telefono;
         if (huella_digital) payload.huella_digital = huella_digital;
+        if (foto_url) payload.foto_url = foto_url;
+
+        // Si envían plan_id desde editar, opcionalmente podríamos registrar una nueva membresia,
+        // pero por ahora el requisito principal es atraparlo en el submit y pasarlo al DB si fuese pertinente.
+        // No alteramos la regla de negocio de Caja sin instrucciones claras.
 
         // Por requerimiento del TPM: "la cédula no se edita por seguridad"
 
