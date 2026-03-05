@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
+import Webcam from "react-webcam";
 import CameraCapture from "@/components/CameraCapture";
 import * as faceapi from '@vladmandic/face-api';
 // We import the new action
@@ -27,6 +28,7 @@ export default function ControlAcceso() {
     const [isBuildingMatcher, setIsBuildingMatcher] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const webcamRef = useRef<any>(null);
+    const isProcessingRef = useRef(false);
 
     // Beep Audios (Base64 short sounds to avoid latency fetching from public)
     const audioSuccess = useRef<HTMLAudioElement | null>(null);
@@ -40,9 +42,16 @@ export default function ControlAcceso() {
         // Init Models Async
         const loadModels = async () => {
             try {
-                // 1. Configurar WebGL como motor principal
-                // @ts-ignore
-                await faceapi.tf.setBackend('webgl');
+                try {
+                    // 1. Configurar WebGL como motor principal
+                    // @ts-ignore
+                    await faceapi.tf.setBackend('webgl');
+                } catch (e) {
+                    console.warn("WebGL no soportado, usando CPU.");
+                    // @ts-ignore
+                    await faceapi.tf.setBackend('cpu');
+                }
+
                 // 2. Esperar a que el motor reporte que está listo
                 // @ts-ignore
                 await faceapi.tf.ready();
@@ -174,69 +183,64 @@ export default function ControlAcceso() {
     };
 
     const escanearRostroActual = async () => {
-        if (!isModelLoaded) {
-            toast.warning("Los modelos neuronales siguen cargando...");
-            return;
-        }
+        if (isProcessingRef.current) return;
+        if (!isModelLoaded || !faceMatcher || !webcamRef.current || !webcamRef.current.video) return;
 
-        if (!webcamRef.current || !webcamRef.current.video) {
-            toast.error("Error: La cámara no está lista o no tiene permisos.");
-            setIsScanning(false);
-            return;
-        }
-
-        if (!faceMatcher) {
-            toast.error("Error: El diccionario de rostros de los socios no está cargado. ¿Hay socios con foto registrados?");
-            setIsScanning(false);
-            return;
-        }
-
-        setIsScanning(true);
         try {
-            console.log("1. Capturando frame de la cámara...");
             const videoElement = webcamRef.current.video;
-
-            if (!videoElement) {
-                toast.error("Error: La cámara no está lista o no tiene permisos.");
-                setIsScanning(false);
-                return;
-            }
-
-            toast.info("Analizando mapa facial, no se mueva...");
-
             const detection = await faceapi.detectSingleFace(videoElement).withFaceLandmarks().withFaceDescriptor();
 
-            if (!detection) {
-                console.warn("No se detectó ningún rostro en el frame.");
-                toast.error("No se detectó ningún rostro. Acércate a la cámara e intenta de nuevo.");
-                setScanState("idle");
-                return;
-            }
+            if (!detection) return; // Salida silenciosa si la red no ve humanos
+
+            // Bloquear el poller tras detectar un humano
+            isProcessingRef.current = true;
+            setIsScanning(true);
 
             console.log("2. Rostro detectado, buscando en la base de datos...");
 
-            if (!faceMatcher || faceMatcher.labeledDescriptors.length === 0) {
+            if (faceMatcher.labeledDescriptors.length === 0) {
                 throw new Error("El diccionario de rostros no está cargado o está vacío.");
             }
 
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+            console.log("3. Resultado del Match:", bestMatch.toString());
 
-            if (bestMatch.label === "unknown") {
+            if (bestMatch.label === "unknown" || bestMatch.distance > 0.6) {
                 setScanState("denegado");
                 setLastTarget({ nombre: "Visita", apellidos: "No Registrada", foto_url: null });
                 setMessage("Rostro NO reconocido en el Gimnasio.");
+                toast.error("Rostro no reconocido. Distancia: " + bestMatch.distance.toFixed(2));
                 playError();
             } else {
-                // bestMatch.label = Cédula almacenada del Socio
+                toast.success(`¡Acceso Permitido! Socio: ${bestMatch.label}`);
                 executeCheckInCycle(bestMatch.label);
             }
         } catch (error: any) {
             console.error("Error crítico en el escaneo:", error);
             toast.error(error.message || "Hubo un error evaluando los vectores faciales.");
         } finally {
-            setIsScanning(false);
+            if (isProcessingRef.current) {
+                setTimeout(() => {
+                    isProcessingRef.current = false;
+                    setIsScanning(false);
+                    setScanState("idle");
+                    setLastTarget(null);
+                    setMessage("");
+                }, 4000);
+            }
         }
     };
+
+    // Escaneo Automático Continuo (Polling)
+    useEffect(() => {
+        if (!isModelLoaded || isBuildingMatcher || !faceMatcher) return;
+
+        const interval = setInterval(() => {
+            escanearRostroActual();
+        }, 1500);
+
+        return () => clearInterval(interval);
+    }, [isModelLoaded, isBuildingMatcher, faceMatcher]);
 
     return (
         <div className="flex flex-col h-full gap-6 max-w-[1600px] mx-auto overflow-hidden">
@@ -268,36 +272,25 @@ export default function ControlAcceso() {
                     <CardContent className="flex flex-col items-center justify-center p-6 flex-1 gap-6 bg-slate-50/50 dark:bg-slate-900/20">
                         {/* Placeholder Visual o Feed Real */}
                         <div className="w-full max-w-md aspect-video bg-black rounded-lg border-4 border-dashed border-slate-700 overflow-hidden relative shadow-inner">
-                            <video
-                                ref={(ref) => {
-                                    if (ref) {
-                                        webcamRef.current = { video: ref };
-                                        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-                                            ref.srcObject = stream;
-                                            ref.play();
-                                        });
-                                    }
-                                }}
+                            <Webcam
+                                ref={webcamRef}
+                                audio={false}
+                                screenshotFormat="image/jpeg"
+                                videoConstraints={{ width: 1280, height: 720, facingMode: "user" }}
+                                mirrored={true}
                                 className="w-full h-full object-cover"
-                                autoPlay
-                                playsInline
-                                muted
                             />
-                            {/* Scanning Laser Line Effect */}
-                            <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_3px_rgba(34,197,94,0.5)] animate-[scan_3s_ease-in-out_infinite]" />
-                        </div>
-                        <Button
-                            className="w-full max-w-md h-16 text-lg font-bold uppercase tracking-wider relative overflow-hidden"
-                            onClick={escanearRostroActual}
-                            disabled={!isModelLoaded || isBuildingMatcher || isScanning}
-                        >
-                            <ScanFace className="mr-3 w-6 h-6" />
-                            {isScanning ? "Escaneando..." : isBuildingMatcher ? "Calculando Matrices Locales..." : !isModelLoaded ? "Cargando IA..." : "Escanear Rostro"}
-
-                            {(isBuildingMatcher || !isModelLoaded || isScanning) && (
-                                <div className="absolute inset-0 bg-primary/20 animate-pulse" />
+                            {/* Scanning Laser Line Effect y Feedback */}
+                            {scanState === "idle" && !isBuildingMatcher && isModelLoaded && !isScanning && (
+                                <>
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_3px_rgba(34,197,94,0.5)] animate-[scan_3s_ease-in-out_infinite]" />
+                                    <div className="absolute top-4 right-4 bg-black/60 text-green-400 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 animate-pulse backdrop-blur-sm border border-green-500/30">
+                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                        Escaneo automático activo...
+                                    </div>
+                                </>
                             )}
-                        </Button>
+                        </div>
                     </CardContent>
                 </Card>
 

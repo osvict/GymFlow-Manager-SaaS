@@ -38,12 +38,9 @@ export default function CameraCapture({ onCapture }: CameraCaptureProps) {
                         audio={false}
                         ref={webcamRef}
                         screenshotFormat="image/jpeg"
+                        videoConstraints={{ width: 1280, height: 720, facingMode: "user" }}
+                        mirrored={true}
                         className="w-full h-full object-cover"
-                        videoConstraints={{
-                            width: 1280,
-                            height: 720,
-                            facingMode: "user"
-                        }}
                     />
                 </div>
             )}
