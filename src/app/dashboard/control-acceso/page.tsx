@@ -47,6 +47,15 @@ export default function ControlAcceso() {
                     });
                 }
                 const MODEL_URL = '/models';
+
+                // 1. Configurar WebGL como motor principal
+                // @ts-ignore
+                await faceapi.tf.setBackend('webgl');
+                // 2. Esperar a que el motor reporte que está listo
+                // @ts-ignore
+                await faceapi.tf.ready();
+
+                // Ahora sí, carga los modelos...
                 await Promise.all([
                     faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
