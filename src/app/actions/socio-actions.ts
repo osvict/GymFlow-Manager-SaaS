@@ -48,7 +48,7 @@ export async function crearSocio(prevState: any, formData: FormData) {
             apellidos,
         };
 
-        if (correo) payload.correo = correo;
+        if (correo) payload.email = correo;
         if (telefono) payload.telefono = telefono;
         if (foto_url) payload.foto_url = foto_url;
 
@@ -63,7 +63,7 @@ export async function crearSocio(prevState: any, formData: FormData) {
                 if (insertError.message.includes("cedula")) {
                     return { success: false, error: "Ya existe un socio registrado con esta cédula." };
                 }
-                return { success: false, error: "Ya existe un socio registrado con este correo." };
+                return { success: false, error: "Ya existe un socio registrado con este correo/email." };
             }
             return { success: false, error: `Error BD: ${insertError.message}` };
         }
