@@ -25,6 +25,7 @@ export default function ControlAcceso() {
     const [isModelLoaded, setIsModelLoaded] = useState(false);
     const [faceMatcher, setFaceMatcher] = useState<faceapi.FaceMatcher | null>(null);
     const [isBuildingMatcher, setIsBuildingMatcher] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
     const webcamRef = useRef<any>(null);
 
     // Beep Audios (Base64 short sounds to avoid latency fetching from public)
@@ -181,20 +182,30 @@ export default function ControlAcceso() {
             return;
         }
 
+        setIsScanning(true);
         try {
+            console.log("1. Capturando frame de la cámara...");
             const videoElement = webcamRef.current.video;
-            if (!videoElement) return;
+
+            if (!videoElement) {
+                throw new Error("Elemento de video no encontrado o webcam bloqueada.");
+            }
 
             toast.info("Analizando mapa facial, no se mueva...");
 
             const detection = await faceapi.detectSingleFace(videoElement).withFaceLandmarks().withFaceDescriptor();
 
             if (!detection) {
-                setScanState("denegado");
-                setLastTarget({ nombre: "Misterio", apellidos: "?", foto_url: null });
-                setMessage("Rostro no detectado / Muévase a la luz");
-                playError();
+                console.warn("No se detectó ningún rostro en el frame.");
+                toast.error("No se detectó ningún rostro. Acércate a la cámara e intenta de nuevo.");
+                setScanState("idle");
                 return;
+            }
+
+            console.log("2. Rostro detectado, buscando en la base de datos...");
+
+            if (!faceMatcher || faceMatcher.labeledDescriptors.length === 0) {
+                throw new Error("El diccionario de rostros no está cargado o está vacío.");
             }
 
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
@@ -208,9 +219,11 @@ export default function ControlAcceso() {
                 // bestMatch.label = Cédula almacenada del Socio
                 executeCheckInCycle(bestMatch.label);
             }
-        } catch (error) {
-            console.error("AI Error:", error);
-            toast.error("Hubo un error evaluando los vectores faciales.");
+        } catch (error: any) {
+            console.error("Error crítico en el escaneo:", error);
+            toast.error(error.message || "Hubo un error evaluando los vectores faciales.");
+        } finally {
+            setIsScanning(false);
         }
     };
 
@@ -265,12 +278,12 @@ export default function ControlAcceso() {
                         <Button
                             className="w-full max-w-md h-16 text-lg font-bold uppercase tracking-wider relative overflow-hidden"
                             onClick={escanearRostroActual}
-                            disabled={!isModelLoaded || isBuildingMatcher}
+                            disabled={!isModelLoaded || isBuildingMatcher || isScanning}
                         >
                             <ScanFace className="mr-3 w-6 h-6" />
-                            {isBuildingMatcher ? "Calculando Matrices Locales..." : !isModelLoaded ? "Cargando IA..." : "Escanear Rostro"}
+                            {isScanning ? "Escaneando..." : isBuildingMatcher ? "Calculando Matrices Locales..." : !isModelLoaded ? "Cargando IA..." : "Escanear Rostro"}
 
-                            {(isBuildingMatcher || !isModelLoaded) && (
+                            {(isBuildingMatcher || !isModelLoaded || isScanning) && (
                                 <div className="absolute inset-0 bg-primary/20 animate-pulse" />
                             )}
                         </Button>
