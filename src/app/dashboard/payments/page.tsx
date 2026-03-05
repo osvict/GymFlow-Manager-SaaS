@@ -1,77 +1,42 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Plus, CreditCard, Banknote, Landmark, CheckCircle2, XCircle } from "lucide-react";
+import { CreditCard, Banknote, Landmark, User, ShoppingCart, Tag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { registrarPagoYMembresia } from "@/app/actions/payment-actions";
 
-export default function GestorMembresiasYPagos() {
-    const [pagos, setPagos] = useState<any[]>([]);
+export default function CajaPOS() {
     const [socios, setSocios] = useState<any[]>([]);
     const [planes, setPlanes] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
-    const [open, setOpen] = useState(false);
     const [planSeleccionado, setPlanSeleccionado] = useState<any>(null);
 
     const supabase = createClient();
 
-    const fetchData = async () => {
+    const fetchPOSData = async () => {
         setIsLoading(true);
-        // Obtener historial de pagos enriquecido con información del socio
-        const { data: pagosData, error: pagosError } = await supabase
-            .from("pagos")
-            .select(`
-                *,
-                socios (nombre, apellidos)
-            `)
-            .order("fecha_pago", { ascending: false });
 
-        if (pagosError) {
-            console.error(pagosError);
-            toast.error("Error al cargar historial de pagos.");
-        } else {
-            setPagos(pagosData || []);
-        }
-
-        // Cargar Socios para el formulario
+        // 1. Cargar Socios Activos
         const { data: sociosData } = await supabase
             .from("socios")
             .select("id, nombre, apellidos, estado");
         setSocios(sociosData || []);
 
-        // Cargar Planes para el formulario
+        // 2. Cargar Planes usando tabla nativa configurada 'planes'
         const { data: planesData, error: planesError } = await supabase
-            .from("planes_suscripcion")
-            .select("id, nombre, precio, duracion_dias")
+            .from("planes")
+            .select("id, nombre, precio, periodo")
             .eq("estado", "activo");
 
         if (planesError) {
-            console.error("Error al cargar planes:", planesError);
-            toast.error("Error al cargar los planes de suscripción.");
+            console.error("Error Extrayendo Planes:", planesError);
+            toast.error("Error al cargar los catálogos de planes.");
             setPlanes([]);
         } else if (!planesData || planesData.length === 0) {
             toast.warning("No hay planes activos registrados en este gimnasio.");
@@ -84,7 +49,7 @@ export default function GestorMembresiasYPagos() {
     };
 
     useEffect(() => {
-        fetchData();
+        fetchPOSData();
     }, []);
 
     const onPlanChange = (value: string) => {
@@ -102,9 +67,10 @@ export default function GestorMembresiasYPagos() {
                 toast.error(result.error);
             } else if (result?.success) {
                 toast.success(result.message);
-                setOpen(false);
+                // Reset form completely handling native HTML wrapper workaround
+                const target = e.target as HTMLFormElement;
+                target.reset();
                 setPlanSeleccionado(null);
-                fetchData();
             }
         });
     };
@@ -115,151 +81,123 @@ export default function GestorMembresiasYPagos() {
     });
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Caja y Membresías</h1>
-                    <p className="text-muted-foreground mt-1">Registra cobros y renueva los accesos de tus socios.</p>
-                </div>
-                <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Cobrar Nueva Membresía
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle>Nueva Venta de Membresía</DialogTitle>
-                            <DialogDescription>
-                                Selecciona al socio y el plan. El sistema calculará el vencimiento automáticamente.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={onSubmit}>
-                            <div className="grid gap-6 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="socio_id">Socio</Label>
-                                    <Select name="socio_id" required disabled={isPending}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona un socio" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {socios.map(socio => (
-                                                <SelectItem key={socio.id} value={socio.id}>
-                                                    {socio.nombre} {socio.apellidos} {socio.estado !== 'activo' ? `(${socio.estado})` : ''}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="plan_id">Plan / Paquete</Label>
-                                    <Select name="plan_id" required disabled={isPending} onValueChange={onPlanChange}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona un plan" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {planes.map(plan => (
-                                                <SelectItem key={plan.id} value={plan.id}>
-                                                    {plan.nombre} ({plan.duracion_dias} días)
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+        <div className="space-y-6 max-w-5xl mx-auto h-full p-4">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Caja y Punto de Venta</h1>
+                <p className="text-muted-foreground mt-1">Registra la venta de nuevas membresías, periodos y cobros físicos.</p>
+            </div>
 
-                                {planSeleccionado && (
-                                    <div className="bg-muted p-4 rounded-md space-y-2 border">
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-muted-foreground">Monto Total a Cobrar:</span>
-                                            <span className="font-bold text-lg text-emerald-600">{formatoMoneda.format(planSeleccionado.precio)}</span>
-                                        </div>
-                                    </div>
-                                )}
+            <form onSubmit={onSubmit} className="mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    {/* Tarjeta 1: Datos de Venta */}
+                    <Card className="border-2 shadow-sm rounded-xl">
+                        <CardHeader className="bg-muted/30 pb-4 border-b rounded-t-xl gap-1">
+                            <CardTitle className="flex items-center gap-2 text-xl">
+                                <ShoppingCart className="w-5 h-5 text-emerald-600" />
+                                Datos de la Venta
+                            </CardTitle>
+                            <CardDescription className="text-sm">
+                                Asigna el cliente y el modelo exacto que se consumirá en el recinto.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-8 pt-8 px-6">
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="metodo_pago">Método de Pago</Label>
-                                    <Select name="metodo_pago" required defaultValue="efectivo" disabled={isPending}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="¿Cómo pagará?" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="efectivo">Efectivo</SelectItem>
-                                            <SelectItem value="tarjeta">Tarjeta (TPV)</SelectItem>
-                                            <SelectItem value="transferencia">Transferencia / SPEI</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            {/* Campo 1: Socio */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold flex items-center gap-2"><User className="w-4 h-4" /> 1. Seleccionar Socio (Cliente)</label>
+                                <Select name="socio_id" required disabled={isPending || isLoading}>
+                                    <SelectTrigger className="w-full h-12 bg-slate-50 dark:bg-slate-900 border-slate-300">
+                                        <SelectValue placeholder="Busca al socio por base de datos" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {socios.map(socio => (
+                                            <SelectItem key={socio.id} value={socio.id} className="py-3">
+                                                {socio.nombre} {socio.apellidos} {socio.estado !== 'activo' ? `(Estado: ${socio.estado})` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <DialogFooter>
-                                <Button type="submit" disabled={!planSeleccionado || isPending} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                                    {isPending ? "Procesando Cobro..." : "Confirmar Recepción de Pago"}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
 
-            <div className="rounded-md border bg-card">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Socio</TableHead>
-                            <TableHead>Monto Recibido</TableHead>
-                            <TableHead>Forma de Pago</TableHead>
-                            <TableHead className="text-right">Ticket</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                    Cargando matriz de caja...
-                                </TableCell>
-                            </TableRow>
-                        ) : pagos.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground flex-col items-center">
-                                    <Banknote className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                                    No hay ingresos registrados en el sistema.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            pagos.map((pago) => (
-                                <TableRow key={pago.id}>
-                                    <TableCell className="font-medium whitespace-nowrap">
-                                        {new Date(pago.fecha_pago).toLocaleString('es-MX', {
-                                            dateStyle: 'medium',
-                                            timeStyle: 'short'
-                                        })}
-                                    </TableCell>
-                                    <TableCell>
-                                        {pago.socios?.nombre} {pago.socios?.apellidos}
-                                    </TableCell>
-                                    <TableCell className="font-bold text-emerald-600">
-                                        {formatoMoneda.format(pago.monto)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm capitalize">
-                                            {pago.metodo_pago === 'efectivo' && <Banknote className="h-4 w-4" />}
-                                            {pago.metodo_pago === 'tarjeta' && <CreditCard className="h-4 w-4" />}
-                                            {pago.metodo_pago === 'transferencia' && <Landmark className="h-4 w-4" />}
-                                            {pago.metodo_pago}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
-                                            #{pago.id.split('-')[0]}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                            {/* Campo 2: Plan */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold flex items-center gap-2"><Tag className="w-4 h-4" /> 2. Seleccionar Modelo / Pase</label>
+                                <Select name="plan_id" required disabled={isPending || isLoading} onValueChange={onPlanChange}>
+                                    <SelectTrigger className="w-full h-12 bg-slate-50 dark:bg-slate-900 border-slate-300">
+                                        <SelectValue placeholder="Elige la membresía o pase a facturar" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {planes.map(plan => (
+                                            <SelectItem key={plan.id} value={plan.id} className="py-3">
+                                                {plan.nombre} ({formatoMoneda.format(plan.precio)})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                        </CardContent>
+                    </Card>
+
+                    {/* Tarjeta 2: Cobro y Checkout */}
+                    <Card className="border-2 border-emerald-500/20 shadow-sm rounded-xl">
+                        <CardHeader className="bg-emerald-50/50 dark:bg-emerald-950/20 pb-4 border-b border-emerald-500/10 rounded-t-xl gap-1">
+                            <CardTitle className="flex items-center gap-2 text-xl text-emerald-700 dark:text-emerald-400">
+                                <Banknote className="w-5 h-5" />
+                                Recepción Monetaria
+                            </CardTitle>
+                            <CardDescription className="text-sm">
+                                Resumen financiero total y transacción final de caja.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-8 pt-8 px-6">
+
+                            {/* Campo 3: Método de Pago */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold">3. Vía de Pago</label>
+                                <Select name="metodo_pago" required defaultValue="efectivo" disabled={isPending}>
+                                    <SelectTrigger className="w-full h-12 border-emerald-300 focus:ring-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20">
+                                        <SelectValue placeholder="¿Cómo pagará el socio?" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="efectivo" className="py-3 font-medium">
+                                            <div className="flex items-center gap-3"><Banknote className="w-5 h-5 text-green-600" /> Efectivo Moneda Nacional</div>
+                                        </SelectItem>
+                                        <SelectItem value="tarjeta" className="py-3 font-medium">
+                                            <div className="flex items-center gap-3"><CreditCard className="w-5 h-5 text-blue-600" /> Tarjeta Vía Terminal Bancaria (TPV)</div>
+                                        </SelectItem>
+                                        <SelectItem value="transferencia" className="py-3 font-medium">
+                                            <div className="flex items-center gap-3"><Landmark className="w-5 h-5 text-purple-600" /> Transferencia o SPEI</div>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Resumen Total */}
+                            <div className="mt-6 bg-slate-50 dark:bg-slate-900/50 p-8 rounded-2xl text-center border-2 border-dashed border-emerald-200 dark:border-emerald-800">
+                                <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-3">Total De La Factura</p>
+                                <h2 className="text-6xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tighter">
+                                    {planSeleccionado ? formatoMoneda.format(planSeleccionado.precio) : "$0.00"}
+                                </h2>
+                                {planSeleccionado && (
+                                    <p className="text-sm font-medium text-muted-foreground mt-4 py-1.5 px-3 bg-slate-200 dark:bg-slate-800 rounded-full inline-block">
+                                        Duración Otorgada: 1 <span className="text-slate-900 dark:text-slate-100 uppercase">{planSeleccionado.periodo}</span>
+                                    </p>
+                                )}
+                            </div>
+
+                            <Button
+                                type="submit"
+                                disabled={!planSeleccionado || isPending}
+                                className="w-full h-20 text-xl font-bold rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-[0_10px_25px_-5px_rgba(16,185,129,0.4)] uppercase tracking-widest mt-6 transition-all border border-emerald-500"
+                            >
+                                {isPending ? "Validando Operación Bancaria..." : "Procesar Cobro de Venta"}
+                            </Button>
+
+                        </CardContent>
+                    </Card>
+                </div>
+            </form>
         </div>
     );
 }
