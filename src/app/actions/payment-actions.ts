@@ -54,11 +54,8 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         const fecha_fin = new Date(fecha_inicio);
         fecha_fin.setDate(fecha_fin.getDate() + duracionDias);
 
-        // 2. Transacción manual (Supabase JS no soporta transacciones reales fácilmente sin RPC, 
-        // pero podemos hacer inserts secuenciales y compensar si fallan o hacer un RPC).
-        // Por simplicidad del MVP, haremos inserciones secuenciales.
-
-        // Insertar Membresía (Upsert o nueva, asumiremos nueva o renovada)
+        // 2. Transacción secuencial segura
+        // Insertar Membresía
         const { data: membresia, error: memError } = await supabase
             .from("membresias")
             .insert({
@@ -73,11 +70,11 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             .single();
 
         if (memError || !membresia) {
-            console.error(memError);
-            return { error: "Error al registrar la membresía." };
+            console.error("Error al registrar membresia:", memError);
+            return { success: false, error: "Error BD: " + (memError?.message || "Falló la inserción de la Membresía.") };
         }
 
-        // Insertar Pago
+        // Insertar Pago amarrado a la membresia_id y método de pago
         const { error: pagoError } = await supabase
             .from("pagos")
             .insert({
@@ -89,22 +86,27 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             });
 
         if (pagoError) {
-            console.error(pagoError);
-            // Idealmente deberíamos eliminar la membresía si falló el pago (Rollback)
+            console.error("Error al registrar pago:", pagoError);
+            // Rollback manual de la membresía huérfana
             await supabase.from("membresias").delete().eq("id", membresia.id);
-            return { error: "Error al registrar el pago." };
+            return { success: false, error: "Error BD: " + pagoError.message };
         }
 
-        // 3. Actualizar estado del socio a "activo" por si estaba inactivo/adeudo
-        await supabase
+        // 3. Activar el socio en caso de que su estado anterior fuera distinto
+        const { error: socioError } = await supabase
             .from("socios")
             .update({ estado: 'activo' })
             .eq("id", socio_id);
+
+        if (socioError) {
+            console.error("Warning: Se concretó el pago, pero falló la actualización del socio", socioError);
+        }
 
         revalidatePath("/dashboard/payments");
         revalidatePath("/dashboard/socios");
         return { success: true, message: "Cobro y membresía aplicados exitosamente." };
     } catch (e: any) {
-        return { error: "Error de servidor al registrar pago." };
+        console.error("Fatal error in POS API:", e);
+        return { success: false, error: "Error interno del servidor al procesar la venta." };
     }
 }

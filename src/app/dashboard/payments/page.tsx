@@ -64,11 +64,21 @@ export default function GestorMembresiasYPagos() {
         setSocios(sociosData || []);
 
         // Cargar Planes para el formulario
-        const { data: planesData } = await supabase
+        const { data: planesData, error: planesError } = await supabase
             .from("planes_suscripcion")
             .select("id, nombre, precio, duracion_dias")
             .eq("estado", "activo");
-        setPlanes(planesData || []);
+
+        if (planesError) {
+            console.error("Error al cargar planes:", planesError);
+            toast.error("Error al cargar los planes de suscripción.");
+            setPlanes([]);
+        } else if (!planesData || planesData.length === 0) {
+            toast.warning("No hay planes activos registrados en este gimnasio.");
+            setPlanes([]);
+        } else {
+            setPlanes(planesData);
+        }
 
         setIsLoading(false);
     };
