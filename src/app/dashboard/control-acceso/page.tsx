@@ -79,7 +79,10 @@ export default function ControlAcceso() {
         setIsBuildingMatcher(true);
         try {
             const result = await obtenerSociosParaBiometria();
-            if (!result?.success || !result.socios) return;
+            if (!result?.success || !result.socios || result.socios.length === 0) {
+                toast.info("No hay socios activos con fotografía en la base de datos para comparar.");
+                return;
+            }
 
             const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
 
@@ -177,8 +180,20 @@ export default function ControlAcceso() {
     };
 
     const escanearRostroActual = async () => {
-        if (!isModelLoaded || !faceMatcher || !webcamRef.current) {
-            toast.warning("Los modelos neuronales siguen cargando o no hay webcams...");
+        if (!isModelLoaded) {
+            toast.warning("Los modelos neuronales siguen cargando...");
+            return;
+        }
+
+        if (!webcamRef.current || !webcamRef.current.video) {
+            toast.error("Error: La cámara no está lista o no tiene permisos.");
+            setIsScanning(false);
+            return;
+        }
+
+        if (!faceMatcher) {
+            toast.error("Error: El diccionario de rostros de los socios no está cargado. ¿Hay socios con foto registrados?");
+            setIsScanning(false);
             return;
         }
 
@@ -188,7 +203,9 @@ export default function ControlAcceso() {
             const videoElement = webcamRef.current.video;
 
             if (!videoElement) {
-                throw new Error("Elemento de video no encontrado o webcam bloqueada.");
+                toast.error("Error: La cámara no está lista o no tiene permisos.");
+                setIsScanning(false);
+                return;
             }
 
             toast.info("Analizando mapa facial, no se mueva...");
