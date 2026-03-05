@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
-import { UserCheck, UserX, ScanFace, CreditCard, ChevronRight } from "lucide-react";
+import { UserCheck, UserX, ScanFace, CreditCard, ChevronRight, Fingerprint, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,10 @@ export default function ControlAcceso() {
     const [isScanning, setIsScanning] = useState(false);
     const webcamRef = useRef<any>(null);
     const isProcessingRef = useRef(false);
+
+    // Multimodal
+    const [modoBiometrico, setModoBiometrico] = useState<"facial" | "huella">("facial");
+    const [isScanningHuella, setIsScanningHuella] = useState(false);
 
     // Beep Audios (Base64 short sounds to avoid latency fetching from public)
     const audioSuccess = useRef<HTMLAudioElement | null>(null);
@@ -233,14 +237,30 @@ export default function ControlAcceso() {
 
     // Escaneo Automático Continuo (Polling)
     useEffect(() => {
-        if (!isModelLoaded || isBuildingMatcher || !faceMatcher) return;
+        if (!isModelLoaded || isBuildingMatcher || !faceMatcher || modoBiometrico !== 'facial') return;
 
         const interval = setInterval(() => {
             escanearRostroActual();
         }, 1500);
 
         return () => clearInterval(interval);
-    }, [isModelLoaded, isBuildingMatcher, faceMatcher]);
+    }, [isModelLoaded, isBuildingMatcher, faceMatcher, modoBiometrico]);
+
+    const handleLeerHuella = () => {
+        if (isProcessingRef.current) return;
+        setIsScanningHuella(true);
+        isProcessingRef.current = true;
+
+        // Simulación SDK Hardware: "Leyendo puerto serie..."
+        setTimeout(async () => {
+            setIsScanningHuella(false);
+            isProcessingRef.current = false;
+            toast.info("Función lista: Aquí se cotejará 'huella_digital' enviando el Template Base64 a Supabase.");
+
+            // TODO: // const resultado = await verificarAccesoHuella(templateFalsoBase64);
+            // setScanState("denegado") o "permitido"
+        }, 2000);
+    };
 
     return (
         <div className="flex flex-col h-full gap-6 max-w-[1600px] mx-auto overflow-hidden">
@@ -255,42 +275,67 @@ export default function ControlAcceso() {
                 </div>
             </div>
 
+            {/* Botonera Multimodal */}
+            <div className="flex gap-4 border-b border-border pb-2">
+                <Button
+                    variant={modoBiometrico === 'facial' ? 'default' : 'outline'}
+                    onClick={() => setModoBiometrico('facial')}
+                    className="flex-1 sm:flex-none"
+                >
+                    <ScanFace className="mr-2 h-4 w-4" /> Inteligencia Facial
+                </Button>
+                <Button
+                    variant={modoBiometrico === 'huella' ? 'default' : 'outline'}
+                    onClick={() => setModoBiometrico('huella')}
+                    className="flex-1 sm:flex-none"
+                >
+                    <Fingerprint className="mr-2 h-4 w-4" /> Lector Dactilar USB
+                </Button>
+            </div>
+
             {/* Layout Principal Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
 
-                {/* Panel Izquierdo: Biometría Facial */}
+                {/* Panel Izquierdo: Sensor Multimodal */}
                 <Card className="flex flex-col h-full overflow-hidden border-2 shadow-sm">
                     <CardHeader className="bg-muted/30 pb-4 border-b">
                         <CardTitle className="flex items-center gap-2 text-xl">
-                            <ScanFace className="w-5 h-5 text-primary" />
-                            Gatekeeper Facial
+                            {modoBiometrico === 'facial' ? <ScanFace className="w-5 h-5 text-primary" /> : <Fingerprint className="w-5 h-5 text-primary" />}
+                            {modoBiometrico === 'facial' ? 'Gatekeeper Facial' : 'Gatekeeper Dactilar'}
                         </CardTitle>
                         <CardDescription>
-                            Posiciona el rostro frente a la cámara web.
+                            {modoBiometrico === 'facial' ? 'Posiciona el rostro frente a la cámara web.' : 'Coloque y mantenga el dedo índice sobre el lector de escritorio.'}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-center p-6 flex-1 gap-6 bg-slate-50/50 dark:bg-slate-900/20">
-                        {/* Placeholder Visual o Feed Real */}
-                        <div className="w-full max-w-md aspect-video bg-black rounded-lg border-4 border-dashed border-slate-700 overflow-hidden relative shadow-inner">
-                            <Webcam
-                                ref={webcamRef}
-                                audio={false}
-                                screenshotFormat="image/jpeg"
-                                videoConstraints={{ width: 1280, height: 720, facingMode: "user" }}
-                                mirrored={true}
-                                className="w-full h-full object-cover"
-                            />
-                            {/* Scanning Laser Line Effect y Feedback */}
-                            {scanState === "idle" && !isBuildingMatcher && isModelLoaded && !isScanning && (
-                                <>
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_3px_rgba(34,197,94,0.5)] animate-[scan_3s_ease-in-out_infinite]" />
-                                    <div className="absolute top-4 right-4 bg-black/60 text-green-400 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 animate-pulse backdrop-blur-sm border border-green-500/30">
-                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                        Escaneo automático activo...
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                    <CardContent className="flex flex-col items-center justify-center p-6 flex-1 gap-6 bg-slate-50/50 dark:bg-slate-900/20 min-h-[400px]">
+                        {modoBiometrico === 'facial' ? (
+                            <div className="w-full max-w-md aspect-video bg-black rounded-lg border-4 border-dashed border-slate-700 overflow-hidden relative shadow-inner">
+                                <Webcam
+                                    ref={webcamRef}
+                                    audio={false}
+                                    screenshotFormat="image/jpeg"
+                                    videoConstraints={{ width: 1280, height: 720, facingMode: "user" }}
+                                    mirrored={true}
+                                    className="w-full h-full object-cover"
+                                />
+                                {scanState === "idle" && !isBuildingMatcher && isModelLoaded && !isScanning && (
+                                    <>
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_15px_3px_rgba(34,197,94,0.5)] animate-[scan_3s_ease-in-out_infinite]" />
+                                        <div className="absolute top-4 right-4 bg-black/60 text-green-400 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 animate-pulse backdrop-blur-sm border border-green-500/30">
+                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                            Escaneo automático activo...
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center w-full max-w-md aspect-video bg-card rounded-lg border-2 border-dashed border-border shadow-sm">
+                                <Fingerprint className={`w-32 h-32 mb-6 ${isScanningHuella ? 'text-primary animate-pulse' : 'text-muted-foreground/30'}`} />
+                                <Button size="lg" onClick={handleLeerHuella} disabled={isScanningHuella} className="w-64">
+                                    {isScanningHuella ? <><Loader2 className="animate-spin mr-2" /> Leyendo Dispositivo USB...</> : "Activar Escáner"}
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

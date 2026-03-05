@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Plus, Edit, User, Mail, Phone, Calendar } from "lucide-react";
+import { Plus, Edit, User, Mail, Phone, Calendar, Fingerprint, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,9 @@ export default function GestorSocios() {
     const [openEditDialog, setOpenEditDialog] = useState(false);
     const [editingSocio, setEditingSocio] = useState<any>(null);
     const [fotoBase64, setFotoBase64] = useState<string | null>(null);
+    const [planes, setPlanes] = useState<any[]>([]);
+    const [huellaString, setHuellaString] = useState<string | null>(null);
+    const [isScanningHuella, setIsScanningHuella] = useState(false);
 
     const supabase = createClient();
 
@@ -55,6 +58,13 @@ export default function GestorSocios() {
         } else {
             setSocios(data || []);
         }
+
+        const { data: planesData } = await supabase
+            .from("planes")
+            .select("id, nombre, precio, periodo")
+            .eq("estado", "activo");
+
+        setPlanes(planesData || []);
         setIsLoading(false);
     };
 
@@ -130,6 +140,16 @@ export default function GestorSocios() {
         });
     };
 
+    const scanHuella = () => {
+        setIsScanningHuella(true);
+        toast.info("Coloque su dedo en el lector USB...");
+        setTimeout(() => {
+            setIsScanningHuella(false);
+            setHuellaString(`template_huella_mock_${Date.now()}`);
+            toast.success("✅ Huella capturada exitosamente.");
+        }, 2000);
+    };
+
     const handleEditClick = (socio: any) => {
         setEditingSocio(socio);
         setOpenEditDialog(true);
@@ -173,9 +193,24 @@ export default function GestorSocios() {
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={onSubmit}>
+                            <input type="hidden" name="huella_digital" value={huellaString || ''} />
                             <div className="flex flex-col gap-6 py-4">
-                                <div className="flex justify-center w-full px-4">
+                                <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full px-4">
                                     <CameraCapture onCapture={setFotoBase64} />
+
+                                    <div className="flex flex-col items-center justify-center p-4 border border-dashed rounded-lg bg-muted/20 w-full sm:w-auto h-full min-h-[150px]">
+                                        <Fingerprint className={`h-12 w-12 mb-2 ${huellaString ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                        <Button
+                                            type="button"
+                                            variant={huellaString ? "outline" : "secondary"}
+                                            size="sm"
+                                            onClick={scanHuella}
+                                            disabled={isScanningHuella}
+                                        >
+                                            {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Escaneando...</> : (huellaString ? "Re-escanear Huella" : "Escanear Huella")}
+                                        </Button>
+                                        {huellaString && <span className="text-xs text-green-600 mt-2 font-medium">✅ Vinculada</span>}
+                                    </div>
                                 </div>
                                 <div className="grid gap-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
@@ -196,6 +231,23 @@ export default function GestorSocios() {
                                                 e.target.value = e.target.value.replace(/\D/g, '');
                                             }}
                                         />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="plan_id" className="text-right">Plan Inicial</Label>
+                                        <select
+                                            name="plan_id"
+                                            id="plan_id"
+                                            required
+                                            disabled={isPending}
+                                            className="col-span-3 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="">-- Selecciona un plan --</option>
+                                            {planes.map(plan => (
+                                                <option key={plan.id} value={plan.id}>
+                                                    {plan.nombre} (${plan.precio} {plan.periodo})
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="nombre" className="text-right">
@@ -348,6 +400,21 @@ export default function GestorSocios() {
                     {editingSocio && (
                         <form onSubmit={onEditSubmit}>
                             <input type="hidden" name="id" value={editingSocio.id} />
+                            <input type="hidden" name="huella_digital" value={huellaString || editingSocio.huella_digital || ''} />
+
+                            <div className="flex flex-col items-center justify-center p-4 py-6 border border-dashed rounded-lg bg-muted/10 mx-4 mt-2">
+                                <Fingerprint className={`h-12 w-12 mb-2 ${(huellaString || editingSocio.huella_digital) ? 'text-green-500' : 'text-muted-foreground'}`} />
+                                <Button
+                                    type="button"
+                                    variant={(huellaString || editingSocio.huella_digital) ? "outline" : "secondary"}
+                                    size="sm"
+                                    onClick={scanHuella}
+                                    disabled={isScanningHuella}
+                                >
+                                    {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Escaneando...</> : ((huellaString || editingSocio.huella_digital) ? "Cambiar Huella Registrada" : "Añadir Huella (Nueva)")}
+                                </Button>
+                            </div>
+
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-nombre" className="text-right">Nombre(s)</Label>
