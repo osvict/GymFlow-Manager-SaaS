@@ -12,14 +12,14 @@ export async function crearSocio(prevState: any, formData: FormData) {
             return { error: "No estás autenticado." };
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: perfilError } = await supabase
             .from("perfiles")
             .select("tenant_id, rol")
             .eq("id", user.id)
             .single();
 
-        if (!profile || !profile.tenant_id) {
-            return { error: "Acceso denegado. No tienes un tenant asignado." };
+        if (perfilError || !profile || !profile.tenant_id) {
+            return { success: false, error: "Error de contexto: No se encontró el gimnasio asignado a este usuario." };
         }
 
         if (profile.rol !== "admin_gym" && profile.rol !== "staff") {
@@ -50,20 +50,20 @@ export async function crearSocio(prevState: any, formData: FormData) {
         if (correo) payload.correo = correo;
         if (telefono) payload.telefono = telefono;
 
-        const { error } = await supabase
+        const { error: insertError } = await supabase
             .from("socios")
             .insert(payload);
 
-        if (error) {
-            console.error("Error creating socio:", error);
+        if (insertError) {
+            console.error("Error creating socio:", insertError);
             // Manejo de error único (cédula o correo)
-            if (error.code === '23505') {
-                if (error.message.includes("cedula")) {
-                    return { error: "Ya existe un socio registrado con esta cédula." };
+            if (insertError.code === '23505') {
+                if (insertError.message.includes("cedula")) {
+                    return { success: false, error: "Ya existe un socio registrado con esta cédula." };
                 }
-                return { error: "Ya existe un socio registrado con este correo." };
+                return { success: false, error: "Ya existe un socio registrado con este correo." };
             }
-            return { error: "Hubo un error al registrar el socio." };
+            return { success: false, error: `Error BD: ${insertError.message}` };
         }
 
         revalidatePath("/dashboard/socios");

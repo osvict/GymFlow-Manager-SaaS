@@ -63,10 +63,10 @@ export default function GestorSocios() {
 
         startTransition(async () => {
             const result = await crearSocio(null, formData);
-            if (result?.error) {
-                toast.error(result.error);
-            } else if (result?.success) {
-                toast.success(result.message);
+            if (!result?.success || result?.error) {
+                toast.error(result?.error || "Error al procesar la solicitud.");
+            } else {
+                toast.success(result?.message || "Socio creado exitosamente.");
                 setOpen(false);
                 fetchSocios();
             }
