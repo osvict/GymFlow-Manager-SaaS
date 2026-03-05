@@ -1,10 +1,7 @@
-import { Users, DollarSign, Activity, CalendarDays, Banknote, ArrowUpRight } from "lucide-react";
+import { Users, Activity, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { getDashboardMetrics } from "@/app/actions/dashboard-actions";
-import Link from "next/link";
-import { RevenueChart } from "./components/RevenueChart";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +17,15 @@ export default async function DashboardPage() {
         );
     }
 
-    const { kpis, ultimosPagos, chartData } = metrics;
+    const { kpis } = metrics;
 
-    // Helper para formato moneda
-    const formatoMoneda = new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-        minimumFractionDigits: 0
-    });
+    // Mock data temporal
+    const vencimientosMock = [
+        { id: 1, nombre: "Carlos", apellidos: "Méndez", contacto: "carlos.md@email.com", dias: 1, mensaje: "Vence mañana" },
+        { id: 2, nombre: "Ana", apellidos: "García", contacto: "+52 555 123 4567", dias: 2, mensaje: "Vence en 2 días" },
+        { id: 3, nombre: "Luis", apellidos: "Rodríguez", contacto: "luis.r@email.com", dias: 3, mensaje: "Vence en 3 días" },
+        { id: 4, nombre: "María", apellidos: "Fernández", contacto: "+52 555 987 6543", dias: 0, mensaje: "Vence hoy" },
+    ];
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -37,24 +35,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-card hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Ingresos del Mes</CardTitle>
-                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
-                            <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
-                            {formatoMoneda.format(kpis?.ingresosMes || 0)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                            Flujo de efectivo mensual
-                        </p>
-                    </CardContent>
-                </Card>
-
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                 <Card className="bg-card hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Socios Activos</CardTitle>
@@ -92,68 +73,52 @@ export default async function DashboardPage() {
                         <div className="text-3xl font-bold">
                             {new Date().toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }).toUpperCase()}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">Periodo fiscal actual</p>
+                        <p className="text-xs text-muted-foreground mt-1">Periodo actual en curso</p>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Charts and Tables */}
-            <div className="grid gap-6 lg:grid-cols-7">
-
-                {/* Gráfica de Ingresos */}
-                <Card className="lg:col-span-4 bg-card">
+            {/* Próximos Vencimientos */}
+            <div className="mt-8">
+                <Card>
                     <CardHeader>
-                        <CardTitle>Flujo de Ingresos (Últimos 7 Días)</CardTitle>
-                        <CardDescription>Rendimiento financiero de ventas y renovaciones.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pl-0 pb-4">
-                        <RevenueChart data={chartData || []} />
-                    </CardContent>
-                </Card>
-
-                {/* Últimos Pagos */}
-                <Card className="lg:col-span-3">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle>Transacciones Recientes</CardTitle>
-                            <CardDescription>Últimos cobros registrados en caja.</CardDescription>
-                        </div>
-                        <Link href="/dashboard/payments">
-                            <Button variant="outline" size="icon" className="h-8 w-8">
-                                <ArrowUpRight className="h-4 w-4" />
-                            </Button>
-                        </Link>
+                        <CardTitle>Próximos Vencimientos</CardTitle>
+                        <CardDescription>Socios con membresías por expirar pronto.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {ultimosPagos && ultimosPagos.length > 0 ? (
-                            <div className="space-y-6">
-                                {ultimosPagos.map((pago: any) => (
-                                    <div key={pago.id} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center">
-                                                <Banknote className="h-4 w-4 text-emerald-600" />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-medium leading-none">
-                                                    {pago.socios?.nombre} {pago.socios?.apellidos}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground mt-1">
-                                                    {new Date(pago.fecha_pago).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="font-semibold text-sm text-emerald-600">
-                                            +{formatoMoneda.format(pago.monto)}
-                                        </div>
-                                    </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Socio</TableHead>
+                                    <TableHead>Contacto</TableHead>
+                                    <TableHead>Días Restantes</TableHead>
+                                    <TableHead className="text-right">Estado</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {vencimientosMock.map((socio) => (
+                                    <TableRow key={socio.id}>
+                                        <TableCell className="font-medium">
+                                            {socio.nombre} {socio.apellidos}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {socio.contacto}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${socio.dias <= 1 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                                                }`}>
+                                                {socio.mensaje}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <span className="text-yellow-600 dark:text-yellow-500 font-medium text-sm">
+                                                Por Vencer
+                                            </span>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-40 text-center text-muted-foreground">
-                                <Banknote className="h-8 w-8 mb-2 opacity-20" />
-                                <p className="text-sm">No hay transacciones recientes.</p>
-                            </div>
-                        )}
+                            </TableBody>
+                        </Table>
                     </CardContent>
                 </Card>
             </div>
