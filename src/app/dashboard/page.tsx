@@ -1,6 +1,8 @@
 import { Users, Activity, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { getDashboardMetrics } from "@/app/actions/dashboard-actions";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,12 @@ export default async function DashboardPage() {
         { id: 2, nombre: "Ana", apellidos: "García", contacto: "+52 555 123 4567", dias: 2, mensaje: "Vence en 2 días" },
         { id: 3, nombre: "Luis", apellidos: "Rodríguez", contacto: "luis.r@email.com", dias: 3, mensaje: "Vence en 3 días" },
         { id: 4, nombre: "María", apellidos: "Fernández", contacto: "+52 555 987 6543", dias: 0, mensaje: "Vence hoy" },
+    ];
+
+    const vencidasMock = [
+        { id: 101, nombre: "Roberto", apellidos: "Gómez", contacto: "roberto@email.com", mensaje: "Vencido hace 5 días" },
+        { id: 102, nombre: "Laura", apellidos: "Torres", contacto: "+52 555 444 3333", mensaje: "Vencido hace 12 días" },
+        { id: 103, nombre: "Pedro", apellidos: "Sánchez", contacto: "pedro.s@email.com", mensaje: "Vencido hace 1 mes" },
     ];
 
     return (
@@ -78,14 +86,14 @@ export default async function DashboardPage() {
                 </Card>
             </div>
 
-            {/* Próximos Vencimientos */}
-            <div className="mt-8">
-                <Card>
+            {/* Tablas de Retención */}
+            <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Próximos Vencimientos</CardTitle>
                         <CardDescription>Socios con membresías por expirar pronto.</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -105,8 +113,7 @@ export default async function DashboardPage() {
                                             {socio.contacto}
                                         </TableCell>
                                         <TableCell>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${socio.dias <= 1 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
-                                                }`}>
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                                                 {socio.mensaje}
                                             </span>
                                         </TableCell>
@@ -114,6 +121,43 @@ export default async function DashboardPage() {
                                             <span className="text-yellow-600 dark:text-yellow-500 font-medium text-sm">
                                                 Por Vencer
                                             </span>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Suscripciones Vencidas</CardTitle>
+                        <CardDescription>Requieren renovación inmediata para acceder.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Socio</TableHead>
+                                    <TableHead>Contacto</TableHead>
+                                    <TableHead>Días Vencido</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {vencidasMock.map((socio) => (
+                                    <TableRow key={socio.id}>
+                                        <TableCell className="font-medium">
+                                            {socio.nombre} {socio.apellidos}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {socio.contacto}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="destructive">{socio.mensaje}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm">Renovar</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}

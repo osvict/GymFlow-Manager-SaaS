@@ -12,14 +12,14 @@ export async function crearPlan(prevState: any, formData: FormData) {
             return { error: "No estás autenticado." };
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: perfilError } = await supabase
             .from("perfiles")
             .select("tenant_id, rol")
             .eq("id", user.id)
             .single();
 
-        if (!profile || !profile.tenant_id) {
-            return { error: "Acceso denegado. No tienes un tenant asignado." };
+        if (perfilError || !profile || !profile.tenant_id) {
+            return { success: false, error: "Error de contexto: No se encontró el gimnasio asignado a este usuario." };
         }
 
         if (profile.rol !== "admin_gym") {
@@ -56,13 +56,13 @@ export async function crearPlan(prevState: any, formData: FormData) {
 
         if (descripcion) payload.descripcion = descripcion;
 
-        const { error } = await supabase
+        const { error: insertError } = await supabase
             .from("planes")
             .insert(payload);
 
-        if (error) {
-            console.error("Error creating plan:", error);
-            return { error: "Hubo un error al registrar el plan." };
+        if (insertError) {
+            console.error("Error Supabase Planes:", insertError);
+            return { success: false, error: `Error BD: ${insertError.message}` };
         }
 
         revalidatePath("/dashboard/planes");
