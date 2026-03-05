@@ -29,35 +29,35 @@ export async function crearPlan(prevState: any, formData: FormData) {
         const nombre = formData.get("nombre") as string;
         const descripcion = formData.get("descripcion") as string;
         const precioStr = formData.get("precio") as string;
-        const duracionDiasStr = formData.get("duracion_dias") as string;
+        const periodo = formData.get("periodo") as string;
 
-        if (!nombre || !precioStr || !duracionDiasStr) {
-            return { error: "Nombre, Precio y Duración son obligatorios." };
+        if (!nombre || !precioStr || !periodo) {
+            return { error: "Nombre, Precio y Periodo son obligatorios." };
+        }
+
+        const validPeriodos = ["DIARIO", "MENSUAL", "TRIMESTRAL", "SEMESTRAL", "ANUAL"];
+        if (!validPeriodos.includes(periodo)) {
+            return { error: "Periodo inválido." };
         }
 
         const precio = parseFloat(precioStr);
-        const duracion_dias = parseInt(duracionDiasStr, 10);
 
         if (isNaN(precio) || precio < 0) {
             return { error: "El precio debe ser un número válido mayor o igual a 0." };
-        }
-
-        if (isNaN(duracion_dias) || duracion_dias <= 0) {
-            return { error: "La duración debe ser al menos de 1 día." };
         }
 
         const payload: any = {
             tenant_id: profile.tenant_id,
             nombre,
             precio,
-            duracion_dias,
+            periodo,
             estado: "activo"
         };
 
         if (descripcion) payload.descripcion = descripcion;
 
         const { error } = await supabase
-            .from("planes_suscripcion")
+            .from("planes")
             .insert(payload);
 
         if (error) {
@@ -95,7 +95,7 @@ export async function toggleEstadoPlan(id: string, estadoActual: string) {
         const nuevoEstado = estadoActual === "activo" ? "inactivo" : "activo";
 
         const { error } = await supabase
-            .from("planes_suscripcion")
+            .from("planes")
             .update({
                 estado: nuevoEstado
             })

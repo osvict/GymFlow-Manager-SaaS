@@ -17,6 +17,13 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -41,7 +48,7 @@ export default function GestorPlanes() {
         setIsLoading(true);
         // Supabase RLS automágicamente filtra por tenant_id del usuario logueado
         const { data, error } = await supabase
-            .from("planes_suscripcion")
+            .from("planes")
             .select("*")
             .order("precio", { ascending: true });
 
@@ -144,12 +151,22 @@ export default function GestorPlanes() {
                                     <Input id="precio" name="precio" type="number" step="0.01" min="0" placeholder="500.00" className="col-span-3" required disabled={isPending} />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="duracion_dias" className="text-right">
-                                        Duración
+                                    <Label htmlFor="periodo" className="text-right">
+                                        Periodo
                                     </Label>
-                                    <div className="col-span-3 flex items-center gap-2">
-                                        <Input id="duracion_dias" name="duracion_dias" type="number" min="1" placeholder="30" className="w-full" required disabled={isPending} />
-                                        <span className="text-sm text-muted-foreground">Días</span>
+                                    <div className="col-span-3">
+                                        <Select name="periodo" disabled={isPending} required>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona el periodo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="DIARIO">Diario</SelectItem>
+                                                <SelectItem value="MENSUAL">Mensual</SelectItem>
+                                                <SelectItem value="TRIMESTRAL">Trimestral</SelectItem>
+                                                <SelectItem value="SEMESTRAL">Semestral</SelectItem>
+                                                <SelectItem value="ANUAL">Anual</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </div>
@@ -208,7 +225,7 @@ export default function GestorPlanes() {
                                     <TableCell>
                                         <div className="flex items-center gap-1 text-muted-foreground text-sm">
                                             <Clock className="h-4 w-4" />
-                                            {plan.duracion_dias} {plan.duracion_dias === 1 ? 'Día' : 'Días'}
+                                            {plan.periodo.charAt(0).toUpperCase() + plan.periodo.slice(1).toLowerCase()}
                                         </div>
                                     </TableCell>
                                     <TableCell>
