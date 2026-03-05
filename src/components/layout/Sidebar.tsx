@@ -4,7 +4,7 @@ import { Dumbbell, Home, Shield, Users, CreditCard, Settings, Tag } from "lucide
 export function Sidebar({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
     const navItems = [
         { name: "Panel Principal", href: "/dashboard", icon: Home },
-        { name: "Control de Accesos", href: "/dashboard/access", icon: Shield },
+        { name: "Control de Accesos", href: "/dashboard/control-acceso", icon: Shield },
         { name: "Socios", href: "/dashboard/socios", icon: Users },
         { name: "Planes de Suscripción", href: "/dashboard/planes", icon: Tag },
         { name: "Membresías y Pagos", href: "/dashboard/payments", icon: CreditCard },
