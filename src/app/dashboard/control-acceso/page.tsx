@@ -39,7 +39,14 @@ export default function ControlAcceso() {
         // Init Models Async
         const loadModels = async () => {
             try {
-                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                if (typeof window !== 'undefined') {
+                    faceapi.env.monkeyPatch({
+                        Canvas: HTMLCanvasElement,
+                        Image: HTMLImageElement,
+                        Video: HTMLVideoElement
+                    });
+                }
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
                 await Promise.all([
                     faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -47,9 +54,11 @@ export default function ControlAcceso() {
                 ]);
                 setIsModelLoaded(true);
                 buildMatcher();
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error loading face models", error);
-                toast.error("Error al cargar los modelos de IA facial. Inténtelo más tarde.");
+                toast.error(error.message || "Error al cargar los modelos de IA facial. Inténtelo más tarde.");
+                setScanState("denegado");
+                setMessage("Error en modelos IA");
             }
         };
 
