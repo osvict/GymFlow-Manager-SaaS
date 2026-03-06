@@ -1,25 +1,28 @@
-import { Users, Activity, CalendarDays } from "lucide-react";
+import { Users, Activity, CalendarDays, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardMetrics } from "@/app/actions/dashboard-actions";
+import { getTenantConfig } from "@/app/actions/tenant-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-    const metrics = await getDashboardMetrics();
+    const metricsResult = await getDashboardMetrics();
+    const configResult = await getTenantConfig();
 
-    if (metrics.error) {
+    if (metricsResult.error) {
         return (
             <div className="flex flex-col items-center justify-center p-12 text-center h-[60vh]">
                 <h2 className="text-2xl font-bold mb-2 text-destructive">Error de Acceso</h2>
-                <p className="text-muted-foreground">{metrics.error}</p>
+                <p className="text-muted-foreground">{metricsResult.error}</p>
             </div>
         );
     }
 
-    const { kpis } = metrics;
+    const { kpis } = metricsResult;
+    const zonaHoraria = configResult?.data?.zona_horaria || 'America/Mexico_City';
 
     // Mock data temporal
     const vencimientosMock = [
@@ -37,9 +40,16 @@ export default async function DashboardPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Centro de Mando</h1>
-                <p className="text-muted-foreground mt-2">Visión general del rendimiento y actividad de tu centro deportivo.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Centro de Mando</h1>
+                    <p className="text-muted-foreground mt-2">Visión general del rendimiento y actividad de tu centro deportivo.</p>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-3 py-1.5 rounded-full border shadow-sm w-fit">
+                    <Globe className="w-4 h-4 text-emerald-600" />
+                    <span>Zona Sucursal: <strong className="text-slate-700 dark:text-slate-200">{zonaHoraria}</strong></span>
+                </div>
             </div>
 
             {/* KPI Cards */}

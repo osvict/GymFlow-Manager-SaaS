@@ -162,11 +162,20 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         const fecha_inicio = new Date();
         const fecha_fin = new Date(fecha_base);
 
-        const formatoLocal = (d: Date) => {
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+        const { data: tenantData } = await supabase
+            .from('tenants')
+            .select('zona_horaria')
+            .eq('id', profile.tenant_id)
+            .maybeSingle();
+        const zonaHoraria = tenantData?.zona_horaria || 'America/Mexico_City';
+
+        const formatoDinamico = (d: Date, zona: string) => {
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: zona,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(d);
         };
 
         switch (plan.periodo) {
@@ -179,8 +188,8 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         // 1. Membresia
         const { data: membresia, error: memError } = await supabase.from("membresias").insert({
             tenant_id: profile!.tenant_id, socio_id, plan_id,
-            fecha_inicio: formatoLocal(fecha_inicio),
-            fecha_fin: formatoLocal(fecha_fin), estado: "activa"
+            fecha_inicio: formatoDinamico(fecha_inicio, zonaHoraria),
+            fecha_fin: formatoDinamico(fecha_fin, zonaHoraria), estado: "activa"
         }).select("id").single();
 
         if (memError) return { success: false, error: "Fallo Membresía BD." };
@@ -201,7 +210,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
 
         // 4. Actualizar Socio
         await supabase.from("socios").update({
-            estado: 'activo', vencimiento_membresia: formatoLocal(fecha_fin), ultimo_pago: new Date().toISOString()
+            estado: 'activo', vencimiento_membresia: formatoDinamico(fecha_fin, zonaHoraria), ultimo_pago: new Date().toISOString()
         }).eq("id", socio_id);
 
         revalidatePath("/", "layout"); // El martillo atómico de la caché
