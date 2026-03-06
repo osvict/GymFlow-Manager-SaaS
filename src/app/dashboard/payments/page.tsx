@@ -57,66 +57,63 @@ export default function CajaPOS() {
             else if (!planesData || planesData.length === 0) { toast.warning("No hay planes activos."); setPlanes([]); }
             else { setPlanes(planesData); }
 
-            // 3. Obtener Movimientos Financieros para las Tarjetas e Historial
-            const { data: movimientos } = await supabase
-                .from("movimientos_caja")
-                .select("id, tipo, concepto, monto, metodo_pago, created_at, referencia_externa_id")
-                .eq("sesion_caja_id", activa.id)
-                .order("created_at", { ascending: false });
+            // 3. Fetch Directo y Sencillo
+            const { data: pagosData, error: errPagos } = await supabase
+                .from('pagos')
+                .select(`id, monto, metodo_pago, fecha_pago, socio_id:socios(nombre, apellidos)`)
+                .eq('sesion_caja_id', activa.id);
+
+            if (errPagos) console.error("Error al traer pagos:", errPagos);
+
+            const { data: egresosData, error: errEgresos } = await supabase
+                .from('movimientos_caja')
+                .select(`id, monto, metodo_pago, created_at, concepto, tipo`)
+                .eq('sesion_caja_id', activa.id)
+                .eq('tipo', 'egreso'); // Filtrar para no duplicar ventas guardadas aquí
+
+            if (errEgresos) console.error("Error al traer egresos:", errEgresos);
+
+            const arrHistorial = [
+                ...(pagosData || []).map((p: any) => {
+                    // supabase-js single relationships often come back as an object rather than array depending on schema
+                    const socio = p.socio_id;
+                    const nombreSocio = (socio && !Array.isArray(socio)) ? `${socio.nombre} ${socio.apellidos}` : 'Socio Desconocido';
+                    return {
+                        id: p.id,
+                        hora: p.fecha_pago,
+                        concepto: `Membresía - ${nombreSocio}`,
+                        metodo: p.metodo_pago,
+                        tipo: 'ingreso',
+                        monto: p.monto
+                    };
+                }),
+                ...(egresosData || []).map((e: any) => ({
+                    id: e.id,
+                    hora: e.created_at,
+                    concepto: e.concepto,
+                    metodo: e.metodo_pago,
+                    tipo: e.tipo,
+                    monto: e.monto
+                }))
+            ].sort((a, b) => new Date(b.hora).getTime() - new Date(a.hora).getTime());
+
+            console.log("=== HISTORIAL FINAL PARA LA TABLA ===", arrHistorial);
 
             let efec = Number(activa.monto_inicial);
             let tarj = 0;
             let trans = 0;
-            let arrHistorial: any[] = [];
 
-            if (movimientos && movimientos.length > 0) {
-                // Para obtener nombres reales de los socios si el ingreso fue membresía
-                const pagosIds = movimientos.filter(m => m.tipo === 'ingreso' && m.referencia_externa_id).map(m => m.referencia_externa_id);
-                let pagosNombres: Record<string, string> = {};
-
-                if (pagosIds.length > 0) {
-                    const { data: pagosData } = await supabase
-                        .from("pagos")
-                        .select("id, socio_id:socios(nombre, apellidos)")
-                        .in("id", pagosIds);
-
-                    if (pagosData) {
-                        pagosData.forEach((p: any) => {
-                            // En supabase-js, las columnas foreign forzadas con alias llegan como objetos anidados
-                            if (p.socio_id && !Array.isArray(p.socio_id)) {
-                                pagosNombres[p.id] = `${p.socio_id.nombre} ${p.socio_id.apellidos}`;
-                            }
-                        });
-                    }
-                }
-
-                arrHistorial = movimientos.map(mov => {
-                    const factor = mov.tipo === 'ingreso' ? 1 : -1;
-                    if (mov.metodo_pago === 'efectivo') efec += Number(mov.monto) * factor;
-                    if (mov.metodo_pago === 'tarjeta') tarj += Number(mov.monto) * factor;
-                    if (mov.metodo_pago === 'transferencia') trans += Number(mov.monto) * factor;
-
-                    let conceptoFinal = mov.concepto;
-                    if (mov.tipo === 'ingreso' && mov.referencia_externa_id && pagosNombres[mov.referencia_externa_id]) {
-                        conceptoFinal = `Membresía - ${pagosNombres[mov.referencia_externa_id]}`;
-                    }
-
-                    return {
-                        id: mov.id,
-                        hora: mov.created_at,
-                        concepto: conceptoFinal,
-                        tipo: mov.tipo,
-                        metodo: mov.metodo_pago,
-                        monto: mov.monto
-                    };
-                });
-            }
+            arrHistorial.forEach(mov => {
+                const factor = mov.tipo === 'ingreso' ? 1 : -1;
+                if (mov.metodo === 'efectivo') efec += Number(mov.monto) * factor;
+                if (mov.metodo === 'tarjeta') tarj += Number(mov.monto) * factor;
+                if (mov.metodo === 'transferencia') trans += Number(mov.monto) * factor;
+            });
 
             setBalanceEfectivo(efec);
             setBalanceTarjeta(tarj);
             setBalanceTransf(trans);
             setHistorial(arrHistorial);
-            console.log("Movimientos obtenidos:", arrHistorial);
         } else {
             setSesion(null); // Caja Cerrada
             setHistorial([]);
@@ -427,7 +424,7 @@ export default function CajaPOS() {
                 <CardContent className="p-0">
                     {historial.length === 0 ? (
                         <div className="p-10 text-center text-muted-foreground font-medium">
-                            Aún no hay movimientos en este turno.
+                            No hay movimientos para mostrar en esta sesión
                         </div>
                     ) : (
                         <Table>
