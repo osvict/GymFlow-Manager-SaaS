@@ -175,16 +175,14 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         const tenant_id = profile.tenant_id;
 
         // --- VALIDACIÓN DE CAJA ---
-        const { data: cajaAbierta, error: errorCaja } = await supabase
+        const { data: cajaAbierta } = await supabase
             .from('sesiones_caja')
             .select('id')
             .eq('tenant_id', tenant_id)
             .eq('estado', 'abierta')
             .single();
 
-        if (errorCaja || !cajaAbierta) {
-            return { success: false, error: "Error: No hay una sesión de caja abierta." };
-        }
+        if (!cajaAbierta) return { success: false, error: "No hay una sesión de caja abierta." };
 
         const socio_id = formData.get("socio_id") as string;
         const plan_id = formData.get("plan_id") as string;
