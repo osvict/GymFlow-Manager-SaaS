@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardMetrics } from "@/app/actions/dashboard-actions";
 import { getTenantConfig } from "@/app/actions/tenant-actions";
+import { LiveClock } from "@/components/live-clock";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,7 @@ export default async function DashboardPage() {
                     <p className="text-muted-foreground mt-2">Visión general del rendimiento y actividad de tu centro deportivo.</p>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-3 py-1.5 rounded-full border shadow-sm w-fit">
-                    <Globe className="w-4 h-4 text-emerald-600" />
-                    <span>Zona Sucursal: <strong className="text-slate-700 dark:text-slate-200">{zonaHoraria}</strong></span>
-                </div>
+                <LiveClock zonaHoraria={zonaHoraria} />
             </div>
 
             {/* KPI Cards */}
