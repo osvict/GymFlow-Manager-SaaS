@@ -177,3 +177,61 @@ export async function toggleEstadoGimnasio(id: string, estadoActual: string) {
         return { error: "Error de servidor al cambiar el estado del gimnasio." };
     }
 }
+
+// ==========================================
+// MÓDULO DE CONFIGURACIÓN DE TENANT
+// ==========================================
+
+export async function getTenantConfig() {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: "No autenticado" };
+
+        const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
+        if (!profile?.tenant_id) return { success: false, error: "Sin tenant" };
+
+        const { data: tenantConfig, error } = await supabase
+            .from("tenants")
+            .select("nombre, telefono, direccion, zona_horaria")
+            .eq("id", profile.tenant_id)
+            .single();
+
+        if (error) return { success: false, error: "Error BD al buscar configuración" };
+
+        return { success: true, data: tenantConfig };
+    } catch (e) {
+        return { success: false, error: "Error de servidor al obtener configuración" };
+    }
+}
+
+export async function updateTenantConfig(formData: FormData) {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: "No autenticado" };
+
+        const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
+        if (!profile?.tenant_id) return { success: false, error: "Sin tenant" };
+
+        const nombre = formData.get("nombre") as string;
+        const telefono = formData.get("telefono") as string;
+        const direccion = formData.get("direccion") as string;
+        const zona_horaria = formData.get("zona_horaria") as string;
+
+        if (!nombre) return { success: false, error: "El nombre es obligatorio" };
+
+        const { error } = await supabase
+            .from("tenants")
+            .update({ nombre, telefono, direccion, zona_horaria })
+            .eq("id", profile.tenant_id);
+
+        if (error) return { success: false, error: "Error BD al actualizar configuración" };
+
+        revalidatePath("/dashboard/configuracion");
+        return { success: true, message: "Configuración actualizada correctamente" };
+    } catch (e) {
+        return { success: false, error: "Error de servidor al actualizar configuración" };
+    }
+}
+
