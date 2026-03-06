@@ -42,6 +42,10 @@ export default function GestorSocios() {
     const [huellaString, setHuellaString] = useState<string | null>(null);
     const [isScanningHuella, setIsScanningHuella] = useState(false);
 
+    // Estado para planes (Select binding seguro)
+    const [planSeleccionadoEstado, setPlanSeleccionadoEstado] = useState<string>("");
+    const [editPlanSeleccionado, setEditPlanSeleccionado] = useState<string>("");
+
     // Estados para Edición de Foto
     const [isRetakingPhoto, setIsRetakingPhoto] = useState(false);
     const [newPhotoBlob, setNewPhotoBlob] = useState<string | null>(null);
@@ -158,6 +162,7 @@ export default function GestorSocios() {
         setEditingSocio(socio);
         setIsRetakingPhoto(false);
         setNewPhotoBlob(null);
+        setEditPlanSeleccionado("");
         setOpenEditDialog(true);
     };
 
@@ -226,6 +231,7 @@ export default function GestorSocios() {
                         </DialogHeader>
                         <form onSubmit={onSubmit}>
                             <input type="hidden" name="huella_digital" value={huellaString || ''} />
+                            <input type="hidden" name="plan_id" value={planSeleccionadoEstado || ''} />
                             <div className="flex flex-col gap-6 py-4">
                                 <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full px-4">
                                     <CameraCapture onCapture={setFotoBase64} />
@@ -267,10 +273,11 @@ export default function GestorSocios() {
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label htmlFor="plan_id" className="text-right">Plan Inicial</Label>
                                         <select
-                                            name="plan_id"
                                             id="plan_id"
                                             required
                                             disabled={isPending}
+                                            value={planSeleccionadoEstado}
+                                            onChange={(e) => setPlanSeleccionadoEstado(e.target.value)}
                                             className="col-span-3 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <option value="">-- Selecciona un plan --</option>
@@ -434,6 +441,7 @@ export default function GestorSocios() {
                             <input type="hidden" name="id" value={editingSocio.id} />
                             <input type="hidden" name="huella_digital" value={huellaString || editingSocio.huella_digital || ''} />
                             <input type="hidden" name="foto_url" value={editingSocio.foto_url || ''} />
+                            <input type="hidden" name="plan_id" value={editPlanSeleccionado || ''} />
 
                             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full px-4 mb-4 mt-2">
                                 <div className="flex flex-col items-center justify-center">
@@ -479,9 +487,10 @@ export default function GestorSocios() {
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-plan_id" className="text-right">Plan Actual</Label>
                                     <select
-                                        name="plan_id"
                                         id="edit-plan_id"
                                         disabled={isPending}
+                                        value={editPlanSeleccionado}
+                                        onChange={(e) => setEditPlanSeleccionado(e.target.value)}
                                         className="col-span-3 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <option value="">-- Conservar Membresía Actual --</option>
