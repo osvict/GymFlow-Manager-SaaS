@@ -398,14 +398,14 @@ export default function GestorSocios() {
                                     </TableCell>
                                     <TableCell>
                                         {(() => {
-                                            const fechaPago = socio.ultimo_pago || socio.created_at;
-                                            if (!fechaPago) return <span className="text-muted-foreground">Sin registro</span>;
+                                            const fechaMostrar = socio.ultimo_pago ? socio.ultimo_pago : socio.created_at;
+                                            if (!fechaMostrar) return <span className="text-muted-foreground">Sin registro</span>;
 
                                             // Handle potential hydration issues and timezone offsets by instantiating Date safely
                                             return (
                                                 <span className="flex items-center gap-1 font-mono text-sm text-muted-foreground">
                                                     <Calendar className="h-3 w-3" />
-                                                    {new Date(fechaPago).toLocaleDateString('es-MX')}
+                                                    {new Date(fechaMostrar).toLocaleDateString('es-MX')}
                                                 </span>
                                             );
                                         })()}
