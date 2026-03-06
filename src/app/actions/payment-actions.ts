@@ -256,15 +256,19 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         }
 
         console.log("2. Insertando Pago (Ticket Finanzas Clásico)...");
+        const pagoPayload = {
+            tenant_id,
+            socio_id,
+            membresia_id: membresia.id,
+            monto,
+            metodo_pago,
+            sesion_caja_id: sesionActiva.id // Required so it binds to the shift
+        };
+        console.log("Payload de Pago:", pagoPayload);
+
         const { data: pagoResult, error: pagoError } = await supabase
             .from("pagos")
-            .insert({
-                tenant_id,
-                socio_id,
-                membresia_id: membresia.id,
-                monto,
-                metodo_pago
-            })
+            .insert(pagoPayload)
             .select("id")
             .single();
 

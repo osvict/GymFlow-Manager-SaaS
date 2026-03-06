@@ -46,7 +46,7 @@ export default function CajaPOS() {
         if (activa) {
             setSesion(activa);
             // 2. Si está abierta, cargar catálogos
-            const { data: sociosData } = await supabase.from("socios").select("id, nombre, apellidos, estado");
+            const { data: sociosData } = await supabase.from("socios").select("id, nombre, apellidos, estado, plan_id");
             setSocios(sociosData || []);
 
             const { data: planesData, error: planesError } = await supabase.from("planes").select("id, nombre, precio, periodo").eq("estado", "activo");
@@ -126,6 +126,15 @@ export default function CajaPOS() {
     }, []);
 
     const onPlanChange = (value: string) => { const plan = planes.find(p => p.id === value); setPlanSeleccionado(plan); };
+
+    const handleSocioChange = (socioId: string) => {
+        const socioEncontrado = socios.find(s => s.id === socioId);
+        if (socioEncontrado && socioEncontrado.plan_id) {
+            onPlanChange(socioEncontrado.plan_id); // Re-use existing plan selection logic
+        } else {
+            setPlanSeleccionado(null); // Clear if no fixed plan
+        }
+    };
 
     // --- MANEJADORES DE ACCIONES --- //
 
@@ -302,7 +311,7 @@ export default function CajaPOS() {
                                 <CardContent className="space-y-6 pt-6 px-6">
                                     <div className="space-y-3">
                                         <label className="text-sm font-semibold flex items-center gap-2"><User className="w-4 h-4" /> 1. Seleccionar Socio</label>
-                                        <Select name="socio_id" required disabled={isPendingVenta}>
+                                        <Select name="socio_id" required disabled={isPendingVenta} onValueChange={handleSocioChange}>
                                             <SelectTrigger className="w-full h-12 bg-slate-50 dark:bg-slate-900 border-slate-300">
                                                 <SelectValue placeholder="Busca al socio inactivo" />
                                             </SelectTrigger>
@@ -313,7 +322,7 @@ export default function CajaPOS() {
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-sm font-semibold flex items-center gap-2"><Tag className="w-4 h-4" /> 2. Seleccionar Plan / Clase</label>
-                                        <Select name="plan_id" required disabled={isPendingVenta} onValueChange={onPlanChange}>
+                                        <Select name="plan_id" required disabled={isPendingVenta} onValueChange={onPlanChange} value={planSeleccionado?.id || ""}>
                                             <SelectTrigger className="w-full h-12 bg-slate-50 dark:bg-slate-900 border-slate-300">
                                                 <SelectValue placeholder="Elige la membresía" />
                                             </SelectTrigger>
