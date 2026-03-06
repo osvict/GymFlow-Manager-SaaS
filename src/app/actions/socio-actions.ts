@@ -35,6 +35,8 @@ export async function crearSocio(prevState: any, formData: FormData) {
         const huella_digital = formData.get("huella_digital") as string;
         const plan_id = formData.get("plan_id") as string;
 
+        console.log("Plan ID recibido en el servidor (crear):", formData.get('plan_id'));
+
         if (!cedula || !nombre || !apellidos || !plan_id) {
             return { error: "Cédula, nombre, apellidos y Plan Inicial son obligatorios." };
         }
@@ -147,6 +149,7 @@ export async function actualizarSocio(prevState: any, formData: FormData) {
         const id = formData.get("id") as string;
 
         console.log("Datos recibidos para editar:", Object.fromEntries(formData.entries()));
+        console.log("Plan ID recibido en el servidor:", formData.get('plan_id'));
 
         const updateData = {
             nombre: formData.get('nombre')?.toString().trim(),
