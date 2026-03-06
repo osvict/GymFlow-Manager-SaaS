@@ -161,8 +161,16 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
 
         const fecha_inicio = new Date();
         const fecha_fin = new Date(fecha_base);
+
+        const formatoLocal = (d: Date) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         switch (plan.periodo) {
-            case "DIARIO": fecha_fin.setDate(fecha_fin.getDate() + 1); break;
+            case "DIARIO": fecha_fin.setDate(fecha_fin.getDate() + 0); break; // +0 vence hoy mismo, +1 vence mañana
             case "MENSUAL": fecha_fin.setMonth(fecha_fin.getMonth() + 1); break;
             case "ANUAL": fecha_fin.setFullYear(fecha_fin.getFullYear() + 1); break;
             default: fecha_fin.setMonth(fecha_fin.getMonth() + 1);
@@ -171,8 +179,8 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         // 1. Membresia
         const { data: membresia, error: memError } = await supabase.from("membresias").insert({
             tenant_id: profile!.tenant_id, socio_id, plan_id,
-            fecha_inicio: fecha_inicio.toISOString().split('T')[0],
-            fecha_fin: fecha_fin.toISOString().split('T')[0], estado: "activa"
+            fecha_inicio: formatoLocal(fecha_inicio),
+            fecha_fin: formatoLocal(fecha_fin), estado: "activa"
         }).select("id").single();
 
         if (memError) return { success: false, error: "Fallo Membresía BD." };
@@ -193,7 +201,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
 
         // 4. Actualizar Socio
         await supabase.from("socios").update({
-            estado: 'activo', vencimiento_membresia: fecha_fin.toISOString().split('T')[0], ultimo_pago: new Date().toISOString()
+            estado: 'activo', vencimiento_membresia: formatoLocal(fecha_fin), ultimo_pago: new Date().toISOString()
         }).eq("id", socio_id);
 
         revalidatePath("/", "layout"); // El martillo atómico de la caché
