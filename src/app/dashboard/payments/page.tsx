@@ -57,46 +57,22 @@ export default function CajaPOS() {
             else if (!planesData || planesData.length === 0) { toast.warning("No hay planes activos."); setPlanes([]); }
             else { setPlanes(planesData); }
 
-            // 3. Fetch Directo y Sencillo
-            const { data: pagosData, error: errPagos } = await supabase
-                .from('pagos')
-                .select(`id, monto, metodo_pago, fecha_pago, socio_id:socios(nombre, apellidos)`)
-                .eq('sesion_caja_id', activa.id);
-
-            if (errPagos) console.error("Error al traer pagos:", errPagos);
-
-            const { data: egresosData, error: errEgresos } = await supabase
+            // 3. Fetch Directo y Blindado (Todo está unificado en movimientos_caja)
+            const { data: movimientosData, error: errMovs } = await supabase
                 .from('movimientos_caja')
-                .select(`id, monto, metodo_pago, created_at, concepto, tipo`)
-                .eq('sesion_caja_id', activa.id)
-                .eq('tipo', 'egreso'); // Filtrar para no duplicar ventas guardadas aquí
-
-            if (errEgresos) console.error("Error al traer egresos:", errEgresos);
-
-            const arrHistorial = [
-                ...(pagosData || []).map((p: any) => {
-                    // supabase-js single relationships often come back as an object rather than array depending on schema
-                    const socio = p.socio_id;
-                    const nombreSocio = (socio && !Array.isArray(socio)) ? `${socio.nombre} ${socio.apellidos}` : 'Socio Desconocido';
-                    return {
-                        id: p.id,
-                        hora: p.fecha_pago,
-                        concepto: `Membresía - ${nombreSocio}`,
-                        metodo: p.metodo_pago,
-                        tipo: 'ingreso',
-                        monto: p.monto
-                    };
-                }),
-                ...(egresosData || []).map((e: any) => ({
-                    id: e.id,
-                    hora: e.created_at,
-                    concepto: e.concepto,
-                    metodo: e.metodo_pago,
-                    tipo: e.tipo,
-                    monto: e.monto
-                }))
-            ].sort((a, b) => new Date(b.hora).getTime() - new Date(a.hora).getTime());
-
+                .select('*')
+                .eq('sesion_caja_id', activa.id);
+            if (errMovs) {
+                console.error("Error al traer movimientos:", errMovs);
+            }
+            const arrHistorial = (movimientosData || []).map((mov: any) => ({
+                id: mov.id,
+                hora: mov.created_at || mov.fecha || new Date().toISOString(),
+                concepto: mov.concepto || 'Movimiento',
+                metodo: mov.metodo_pago,
+                tipo: mov.tipo,
+                monto: mov.monto
+            })).sort((a, b) => new Date(b.hora).getTime() - new Date(a.hora).getTime());
             console.log("=== HISTORIAL FINAL PARA LA TABLA ===", arrHistorial);
 
             let efec = Number(activa.monto_inicial);
