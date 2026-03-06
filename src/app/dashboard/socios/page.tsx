@@ -245,7 +245,13 @@ export default function GestorSocios() {
                                             onClick={verificarLectorHuellas}
                                             disabled={isScanningHuella}
                                         >
-                                            {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando...</> : (huellaString ? "Re-escanear Huella" : "Escanear Huella")}
+                                            <div key="fingerprint-wrapper-new" className="flex items-center justify-center w-full">
+                                                {isScanningHuella ? (
+                                                    <div key="scan-new-active" className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando...</div>
+                                                ) : (
+                                                    <div key="scan-new-idle">{huellaString ? "Re-escanear Huella" : "Escanear Huella"}</div>
+                                                )}
+                                            </div>
                                         </Button>
                                         {huellaString && <span className="text-xs text-green-600 mt-2 font-medium">✅ Vinculada</span>}
                                     </div>
@@ -502,7 +508,13 @@ export default function GestorSocios() {
                                         onClick={verificarLectorHuellas}
                                         disabled={isScanningHuella}
                                     >
-                                        {isScanningHuella ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando...</> : ((huellaString || editingSocio.huella_digital) ? "Cambiar Huella Registrada" : "Añadir Huella (Nueva)")}
+                                        <div key="fingerprint-wrapper-edit" className="flex items-center justify-center w-full">
+                                            {isScanningHuella ? (
+                                                <div key="scan-edit-active" className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando...</div>
+                                            ) : (
+                                                <div key="scan-edit-idle">{(huellaString || editingSocio.huella_digital) ? "Cambiar Huella Registrada" : "Añadir Huella (Nueva)"}</div>
+                                            )}
+                                        </div>
                                     </Button>
                                 </div>
                             </div>

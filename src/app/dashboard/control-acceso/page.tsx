@@ -332,7 +332,13 @@ export default function ControlAcceso() {
                             <div className="flex flex-col items-center justify-center w-full max-w-md aspect-video bg-card rounded-lg border-2 border-dashed border-border shadow-sm">
                                 <Fingerprint className={`w-32 h-32 mb-6 ${isScanningHuella ? 'text-primary animate-pulse' : 'text-muted-foreground/30'}`} />
                                 <Button size="lg" onClick={handleLeerHuella} disabled={isScanningHuella} className="w-64">
-                                    {isScanningHuella ? <><Loader2 className="animate-spin mr-2" /> Leyendo Dispositivo USB...</> : "Activar Escáner"}
+                                    <div key="usb-scanner-wrapper" className="flex items-center justify-center w-full">
+                                        {isScanningHuella ? (
+                                            <div key="usb-scanning" className="flex items-center"><Loader2 className="animate-spin mr-2" /> Leyendo Dispositivo USB...</div>
+                                        ) : (
+                                            <div key="usb-idle">Activar Escáner</div>
+                                        )}
+                                    </div>
                                 </Button>
                             </div>
                         )}
