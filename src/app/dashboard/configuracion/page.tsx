@@ -20,13 +20,13 @@ export default function ConfiguracionPage() {
     const fetchConfig = async () => {
         setIsLoading(true);
         const result = await getTenantConfig();
-        if (result?.success && result.data) {
+        if (result?.data) {
             setConfig(result.data);
             if (result.data.zona_horaria) {
                 setZonaSeleccionada(result.data.zona_horaria);
             }
         } else {
-            toast.error(result?.error || "Error al cargar configuración");
+            toast.error("Error al cargar configuración");
         }
         setIsLoading(false);
     };
