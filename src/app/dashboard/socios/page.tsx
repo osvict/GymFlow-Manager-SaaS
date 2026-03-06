@@ -57,7 +57,7 @@ export default function GestorSocios() {
         // Supabase RLS will automatically filter these for the user's tenant_id!
         const { data, error } = await supabase
             .from("socios")
-            .select("*")
+            .select("*, planes(nombre)")
             .order("fecha_registro", { ascending: false });
 
         if (error) {
@@ -332,7 +332,9 @@ export default function GestorSocios() {
                             <TableHead>Nombre Completo</TableHead>
                             <TableHead>Contacto</TableHead>
                             <TableHead>Estado</TableHead>
-                            <TableHead>Vencimiento Plan</TableHead>
+                            <TableHead>Plan Asignado</TableHead>
+                            <TableHead>Inicio / Último Pago</TableHead>
+                            <TableHead>Vencimiento</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -388,12 +390,34 @@ export default function GestorSocios() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
+                                        {socio.planes?.nombre ? (
+                                            <span className="font-medium">{socio.planes.nombre}</span>
+                                        ) : (
+                                            <span className="text-muted-foreground italic">Sin Plan Asignado</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {(() => {
+                                            const fechaPago = socio.ultimo_pago || socio.created_at;
+                                            if (!fechaPago) return <span className="text-muted-foreground">Sin registro</span>;
+
+                                            // Handle potential hydration issues and timezone offsets by instantiating Date safely
+                                            return (
+                                                <span className="flex items-center gap-1 font-mono text-sm text-muted-foreground">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {new Date(fechaPago).toLocaleDateString('es-MX')}
+                                                </span>
+                                            );
+                                        })()}
+                                    </TableCell>
+                                    <TableCell>
                                         {(() => {
                                             if (!socio.vencimiento_membresia) {
-                                                return <Badge variant="outline" className="text-muted-foreground border-dashed">Sin Plan</Badge>;
+                                                return <Badge variant="outline" className="text-muted-foreground border-dashed bg-muted/50">Sin Membresía</Badge>;
                                             }
 
                                             // Evaluamos contra hoy en tiempo local (truncamos a las 00:00)
+                                            // Adding 'T00:00:00' ensures the date is parsed in local time, not UTC.
                                             const expDate = new Date(socio.vencimiento_membresia + 'T00:00:00');
                                             const today = new Date();
                                             today.setHours(0, 0, 0, 0);
@@ -402,9 +426,9 @@ export default function GestorSocios() {
 
                                             return (
                                                 <div className="flex flex-col items-start gap-1">
-                                                    <span className="flex items-center gap-1 font-mono text-sm">
-                                                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                                                        {expDate.toLocaleDateString()}
+                                                    <span className={`flex items-center gap-1 font-mono text-sm ${isExpired ? 'text-red-600' : 'text-green-600'}`}>
+                                                        <Calendar className="h-3 w-3" />
+                                                        {expDate.toLocaleDateString('es-MX')}
                                                     </span>
                                                     <Badge variant={isExpired ? "destructive" : "default"}
                                                         className={!isExpired ? "bg-emerald-100/80 text-emerald-800 hover:bg-emerald-100 border-none" : ""}>
