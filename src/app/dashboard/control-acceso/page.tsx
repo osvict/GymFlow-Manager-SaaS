@@ -246,20 +246,27 @@ export default function ControlAcceso() {
         return () => clearInterval(interval);
     }, [isModelLoaded, isBuildingMatcher, faceMatcher, modoBiometrico]);
 
-    const handleLeerHuella = () => {
+    const handleLeerHuella = async () => {
         if (isProcessingRef.current) return;
         setIsScanningHuella(true);
         isProcessingRef.current = true;
 
-        // Simulación SDK Hardware: "Leyendo puerto serie..."
-        setTimeout(async () => {
-            setIsScanningHuella(false);
-            isProcessingRef.current = false;
-            toast.info("Función lista: Aquí se cotejará 'huella_digital' enviando el Template Base64 a Supabase.");
+        try {
+            const device = await (navigator as any).usb.requestDevice({
+                filters: [{ vendorId: 0x05ba }] // Vendor ID específico para U.are.U
+            });
+            await device.open();
+            toast.success(`Lector activo: ${device.productName || "U.are.U 4500"}. Esperando plantilla...`);
 
             // TODO: // const resultado = await verificarAccesoHuella(templateFalsoBase64);
             // setScanState("denegado") o "permitido"
-        }, 2000);
+        } catch (error: any) {
+            console.error("Fallo de conexión USB:", error);
+            toast.error("Error de interconexión con el lector USB. ¿Permisos denegados?");
+        } finally {
+            setIsScanningHuella(false);
+            isProcessingRef.current = false;
+        }
     };
 
     return (
