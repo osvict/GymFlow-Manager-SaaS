@@ -188,7 +188,7 @@ export async function getTenantConfig() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "No autenticado" };
 
-        const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
+        const { data: profile } = await supabase.from('perfiles').select('tenant_id').eq('id', user.id).single();
         if (!profile?.tenant_id) return { success: false, error: "Sin tenant" };
 
         const { data: tenantConfig, error } = await supabase
@@ -197,11 +197,14 @@ export async function getTenantConfig() {
             .eq("id", profile.tenant_id)
             .single();
 
-        if (error) return { success: false, error: "Error BD al buscar configuración" };
+        if (error) {
+            console.error("Fallo exacto en Supabase:", error);
+            return { success: false, error: error.message };
+        }
 
         return { success: true, data: tenantConfig };
-    } catch (e) {
-        return { success: false, error: "Error de servidor al obtener configuración" };
+    } catch (e: any) {
+        return { success: false, error: e.message || "Error de servidor al obtener configuración" };
     }
 }
 
@@ -213,7 +216,7 @@ export async function updateTenantConfig(formData: FormData) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "No autenticado" };
 
-        const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
+        const { data: profile } = await supabase.from('perfiles').select('tenant_id').eq('id', user.id).single();
         if (!profile?.tenant_id) return { success: false, error: "Sin tenant" };
 
         const updateData = {
@@ -225,12 +228,15 @@ export async function updateTenantConfig(formData: FormData) {
 
         if (!updateData.nombre) return { success: false, error: "El nombre es obligatorio" };
 
-        const { error } = await supabase
-            .from("tenants")
+        const { error: updateError } = await supabase
+            .from('tenants')
             .update(updateData)
-            .eq("id", profile.tenant_id);
+            .eq('id', profile.tenant_id); // <-- CRÍTICO: Buscar por 'id', usando el tenant_id del perfil
 
-        if (error) return { success: false, error: error.message };
+        if (updateError) {
+            console.error("Fallo exacto en Supabase:", updateError);
+            return { success: false, error: updateError.message };
+        }
 
         revalidatePath("/", "layout");
         return { success: true, message: "Configuración actualizada correctamente" };
