@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CreditCard, Banknote, Landmark, User, ShoppingCart, Tag, Store, Receipt, Wallet, LockKeyhole } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ export default function CajaPOS() {
     const [balanceEfectivo, setBalanceEfectivo] = useState(0);
     const [balanceTarjeta, setBalanceTarjeta] = useState(0);
     const [balanceTransf, setBalanceTransf] = useState(0);
+
+    const router = useRouter();
 
     const [socios, setSocios] = useState<any[]>([]);
     const [planes, setPlanes] = useState<any[]>([]);
@@ -113,6 +116,7 @@ export default function CajaPOS() {
             setBalanceTarjeta(tarj);
             setBalanceTransf(trans);
             setHistorial(arrHistorial);
+            console.log("Movimientos obtenidos:", arrHistorial);
         } else {
             setSesion(null); // Caja Cerrada
             setHistorial([]);
@@ -168,6 +172,7 @@ export default function CajaPOS() {
                 (e.target as HTMLFormElement).reset();
                 setPlanSeleccionado(null);
                 fetchCajaData(); // Recargar tarjetas métricas
+                router.refresh(); // Fuerza a Next.js a re-ejecutar las consultas del servidor
             }
         });
     };

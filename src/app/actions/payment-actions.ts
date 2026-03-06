@@ -172,10 +172,18 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
         if (!profile || !profile.tenant_id) return { error: "Acceso denegado. No tienes un tenant." };
 
+        const tenant_id = profile.tenant_id;
+
         // --- VALIDACIÓN DE CAJA ---
-        const { data: sesionActiva } = await getSesionCajaActiva();
-        if (!sesionActiva) {
-            return { error: "Bloqueo: Debes ABRIR CAJA primero (Turno Inactivo)." };
+        const { data: cajaAbierta, error: errorCaja } = await supabase
+            .from('sesiones_caja')
+            .select('id')
+            .eq('tenant_id', tenant_id)
+            .eq('estado', 'abierta')
+            .single();
+
+        if (errorCaja || !cajaAbierta) {
+            return { success: false, error: "Error: No hay una sesión de caja abierta." };
         }
 
         const socio_id = formData.get("socio_id") as string;
@@ -197,7 +205,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         }
 
         const monto = plan.precio;
-        const tenant_id = profile.tenant_id;
+        // tenant_id moved to avoid scoping issues
 
         // --- LOGICA DE ANNIVERSARY BILLING ---
         const { data: socioCurrent } = await supabase
@@ -262,7 +270,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             membresia_id: membresia.id,
             monto,
             metodo_pago,
-            sesion_caja_id: sesionActiva.id // Required so it binds to the shift
+            sesion_caja_id: cajaAbierta.id // Required so it binds to the shift
         };
         console.log("Payload de Pago:", pagoPayload);
 
@@ -282,7 +290,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             .from("movimientos_caja")
             .insert({
                 tenant_id,
-                sesion_caja_id: sesionActiva.id,
+                sesion_caja_id: cajaAbierta.id,
                 usuario_id: user.id,
                 tipo: 'ingreso',
                 concepto: 'Venta de Pase o Membresía',
