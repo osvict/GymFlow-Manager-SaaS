@@ -195,7 +195,7 @@ export async function getTenantConfig() {
             .from("tenants")
             .select("nombre, telefono, direccion, zona_horaria")
             .eq("id", profile.tenant_id)
-            .single();
+            .maybeSingle();
 
         if (error) {
             console.error("Fallo exacto en Supabase:", error);
