@@ -128,6 +128,7 @@ export default function ConfiguracionPage() {
                                         {timezones.map(tz => (
                                             <SelectItem key={tz} value={tz}>{tz}</SelectItem>
                                         ))}
+                                        <SelectItem value="America/Caracas">Venezuela (Hora de Venezuela, UTC-4)</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <p className="text-xs text-muted-foreground px-1">
