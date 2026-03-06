@@ -165,7 +165,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
         const { data: tenantData } = await supabase
             .from('tenants')
             .select('zona_horaria')
-            .eq('id', profile.tenant_id)
+            .eq('id', profile?.tenant_id || '')
             .maybeSingle();
         const zonaHoraria = tenantData?.zona_horaria || 'America/Mexico_City';
 
