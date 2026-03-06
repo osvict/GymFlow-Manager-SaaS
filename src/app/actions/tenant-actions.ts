@@ -207,6 +207,8 @@ export async function getTenantConfig() {
 
 export async function updateTenantConfig(formData: FormData) {
     try {
+        console.log("Datos para Tenant recibidos:", Object.fromEntries(formData.entries()));
+
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "No autenticado" };
@@ -214,24 +216,26 @@ export async function updateTenantConfig(formData: FormData) {
         const { data: profile } = await supabase.from("perfiles").select("tenant_id").eq("id", user.id).single();
         if (!profile?.tenant_id) return { success: false, error: "Sin tenant" };
 
-        const nombre = formData.get("nombre") as string;
-        const telefono = formData.get("telefono") as string;
-        const direccion = formData.get("direccion") as string;
-        const zona_horaria = formData.get("zona_horaria") as string;
+        const updateData = {
+            nombre: formData.get('nombre')?.toString().trim() || null,
+            telefono: formData.get('telefono')?.toString().trim() || null,
+            direccion: formData.get('direccion')?.toString().trim() || null,
+            zona_horaria: formData.get('zona_horaria')?.toString().trim() || 'America/Mexico_City',
+        };
 
-        if (!nombre) return { success: false, error: "El nombre es obligatorio" };
+        if (!updateData.nombre) return { success: false, error: "El nombre es obligatorio" };
 
         const { error } = await supabase
             .from("tenants")
-            .update({ nombre, telefono, direccion, zona_horaria })
+            .update(updateData)
             .eq("id", profile.tenant_id);
 
-        if (error) return { success: false, error: "Error BD al actualizar configuración" };
+        if (error) return { success: false, error: error.message };
 
-        revalidatePath("/dashboard/configuracion");
+        revalidatePath("/", "layout");
         return { success: true, message: "Configuración actualizada correctamente" };
-    } catch (e) {
-        return { success: false, error: "Error de servidor al actualizar configuración" };
+    } catch (e: any) {
+        return { success: false, error: e.message || "Error de servidor al actualizar configuración" };
     }
 }
 

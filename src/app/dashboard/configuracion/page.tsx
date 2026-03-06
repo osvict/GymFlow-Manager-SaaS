@@ -15,7 +15,7 @@ export default function ConfiguracionPage() {
     const [config, setConfig] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
-    const [zonaHoraria, setZonaHoraria] = useState("America/Mexico_City");
+    const [zonaSeleccionada, setZonaSeleccionada] = useState("America/Mexico_City");
 
     const fetchConfig = async () => {
         setIsLoading(true);
@@ -23,7 +23,7 @@ export default function ConfiguracionPage() {
         if (result?.success && result.data) {
             setConfig(result.data);
             if (result.data.zona_horaria) {
-                setZonaHoraria(result.data.zona_horaria);
+                setZonaSeleccionada(result.data.zona_horaria);
             }
         } else {
             toast.error(result?.error || "Error al cargar configuración");
@@ -118,9 +118,9 @@ export default function ConfiguracionPage() {
                                 </Label>
 
                                 {/* Blindaje del Select para enviar el valor en FormData */}
-                                <input type="hidden" name="zona_horaria" value={zonaHoraria} />
+                                <input type="hidden" name="zona_horaria" value={zonaSeleccionada} />
 
-                                <Select required disabled={isPending} value={zonaHoraria} onValueChange={setZonaHoraria}>
+                                <Select required disabled={isPending} value={zonaSeleccionada} onValueChange={setZonaSeleccionada}>
                                     <SelectTrigger className="w-full h-12 border-slate-200 bg-white dark:bg-slate-950">
                                         <SelectValue placeholder="Selecciona zona horaria" />
                                     </SelectTrigger>
