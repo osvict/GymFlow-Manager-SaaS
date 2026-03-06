@@ -174,15 +174,14 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
 
         const tenant_id = profile.tenant_id;
 
-        // --- VALIDACIÓN DE CAJA ---
         const { data: cajaAbierta } = await supabase
             .from('sesiones_caja')
             .select('id')
-            .eq('tenant_id', tenant_id)
+            .eq('tenant_id', profile.tenant_id)
             .eq('estado', 'abierta')
             .single();
 
-        if (!cajaAbierta) return { success: false, error: "No hay una sesión de caja abierta." };
+        if (!cajaAbierta?.id) return { success: false, error: "Debes abrir la caja de tu turno antes de procesar cobros." };
 
         const socio_id = formData.get("socio_id") as string;
         const plan_id = formData.get("plan_id") as string;
@@ -270,7 +269,7 @@ export async function registrarPagoYMembresia(prevState: any, formData: FormData
             metodo_pago,
             sesion_caja_id: cajaAbierta.id // Required so it binds to the shift
         };
-        console.log("Payload de Pago:", pagoPayload);
+        console.log("Payload de Pago Fuerte:", pagoPayload);
 
         const { data: pagoResult, error: pagoError } = await supabase
             .from("pagos")
