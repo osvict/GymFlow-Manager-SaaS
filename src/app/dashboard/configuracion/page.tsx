@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getTenantConfig, updateTenantConfig } from "@/app/actions/tenant-actions";
 
@@ -141,11 +140,11 @@ export default function ConfiguracionPage() {
                             <Label className="text-base font-semibold flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-muted-foreground" /> Dirección Física
                             </Label>
-                            <Textarea
+                            <Input
+                                type="text"
                                 name="direccion"
-                                rows={3}
                                 defaultValue={config?.direccion || ""}
-                                className="resize-none border-slate-200 focus-visible:ring-primary"
+                                className="h-12 border-slate-200 focus-visible:ring-primary"
                                 placeholder="Ej: Av. Principal 123, Colonia Centro..."
                                 disabled={isPending}
                             />
